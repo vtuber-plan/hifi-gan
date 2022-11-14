@@ -1,0 +1,9 @@
+Cython==0.29.32
+librosa==0.9.2
+matplotlib==3.5.3
+numpy==1.23.3
+scipy==1.9.1
+pytorch-lightning==1.7.5
+
+fairseq==0.12.2
+tensorboardX==2.5.1
