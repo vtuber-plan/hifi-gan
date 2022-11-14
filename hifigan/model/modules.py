@@ -9,8 +9,7 @@ from torch.nn import functional as F
 from torch.nn import Conv1d, ConvTranspose1d, AvgPool1d, Conv2d
 from torch.nn.utils import weight_norm, remove_weight_norm
 
-from .. import commons
-from .commons import init_weights, get_padding
+from .commons import init_weights, get_padding, fused_add_tanh_sigmoid_multiply
 from .transforms import piecewise_rational_quadratic_transform
 
 LRELU_SLOPE = 0.1
@@ -159,7 +158,7 @@ class WN(torch.nn.Module):
             else:
                 g_l = torch.zeros_like(x_in)
 
-            acts = commons.fused_add_tanh_sigmoid_multiply(
+            acts = fused_add_tanh_sigmoid_multiply(
                 x_in,
                 g_l,
                 n_channels_tensor)

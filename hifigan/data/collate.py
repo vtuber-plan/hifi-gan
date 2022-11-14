@@ -27,7 +27,7 @@ class MelCollate():
             x_mel_padded[i, :, :mel.size(1)] = mel
             x_mel_lengths[i] = mel.size(1)
 
-            wav = row["y_wav"]
+            wav = row["wav"]
             y_wav_padded[i, :, :wav.size(1)] = wav
             y_wav_lengths[i] = wav.size(1)
 
