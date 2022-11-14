@@ -15,7 +15,7 @@ import pytorch_lightning as pl
 
 from .discriminators.multi_scale_discriminator import MultiScaleDiscriminator
 from .discriminators.multi_period_discriminator import MultiPeriodDiscriminator
-from .generators.generator import HifiGANGenerator
+from .generators.generator import Generator
 
 from ..mel_processing import spec_to_mel_torch, mel_spectrogram_torch, spectrogram_torch, spectrogram_torch_audio
 from .losses import discriminator_loss, kl_loss,feature_loss, generator_loss
@@ -27,7 +27,7 @@ class HifiGAN(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(*[k for k in kwargs])
 
-        self.net_g = HifiGANGenerator(
+        self.net_g = Generator(
             self.hparams.model.inter_channels,
             self.hparams.model.resblock,
             self.hparams.model.resblock_kernel_sizes,

@@ -1,3 +1,3 @@
 dependencies = ["torch", "torchaudio"]
 
-from hifigan.model.generators.generator import HifiGANGenerator
+from hifigan.hub import hifigan_48k

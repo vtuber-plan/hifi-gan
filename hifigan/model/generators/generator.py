@@ -12,7 +12,7 @@ from torch.nn.utils import weight_norm, remove_weight_norm, spectral_norm
 from ..commons import init_weights, get_padding
 
 
-class HifiGANGenerator(torch.nn.Module):
+class Generator(torch.nn.Module):
     def __init__(self, initial_channel: int,
                     resblock: Union[str, ResBlock2],
                     resblock_kernel_sizes: List[int],
@@ -20,7 +20,7 @@ class HifiGANGenerator(torch.nn.Module):
                     upsample_rates: List[int],
                     upsample_initial_channel: int,
                     upsample_kernel_sizes: List[int]):
-        super(HifiGANGenerator, self).__init__()
+        super(Generator, self).__init__()
         self.num_kernels = len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_rates)
         self.conv_pre = Conv1d(in_channels=initial_channel, out_channels=upsample_initial_channel, kernel_size=7, stride=1, padding=3)
