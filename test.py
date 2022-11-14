@@ -2,8 +2,8 @@ import torch, torchaudio
 
 from hifigan.mel_processing import mel_spectrogram_torch
 
-# Load checkpoint (either hubert_soft or hubert_discrete)
-hifigan = torch.hub.load("vtuber-plan/hifi-gan:main", "HifiGANGenerator").cuda()
+# Load checkpoint
+hifigan = torch.hub.load("vtuber-plan/hifi-gan:main", "HifiGANGenerator", force_reload=True).cuda()
 
 # Load audio
 wav, sr = torchaudio.load("test.wav")
