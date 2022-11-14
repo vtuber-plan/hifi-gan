@@ -31,7 +31,7 @@ def get_hparams(config_path: str) -> HParams:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', type=str, default="./configs/base.json", help='JSON file for configuration')
+    parser.add_argument('-c', '--config', type=str, default="./configs/48k.json", help='JSON file for configuration')
     parser.add_argument('-a', '--accelerator', type=str, default="gpu", help='training device')
     parser.add_argument('-d', '--device', type=str, default="0", help='training device ids')
     args = parser.parse_args()

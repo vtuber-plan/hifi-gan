@@ -14,7 +14,7 @@
       "learning_rate": 2e-4,
       "betas": [0.8, 0.99],
       "eps": 1e-9,
-      "batch_size": 32,
+      "batch_size": 64,
       "fp16_run": true,
       "lr_decay": 0.999875,
       "segment_size": 16384,
@@ -37,10 +37,7 @@
     "model": {
       "inter_channels": 256,
       "hidden_channels": 256,
-      "hubert_channels": 1280,
       "filter_channels": 768,
-      "n_heads": 4,
-      "n_layers": 6,
       "kernel_size": 3,
       "p_dropout": 0.1,
       "resblock": "1",
@@ -52,9 +49,6 @@
       ],
       "upsample_rates": [8,8,4,2],
       "upsample_initial_channel": 512,
-      "upsample_kernel_sizes": [16,16,4,4],
-      "n_layers_q": 3,
-      "use_spectral_norm": false,
-      "gin_channels": 256
+      "upsample_kernel_sizes": [16,16,4,4]
     }
   }

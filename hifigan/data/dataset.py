@@ -9,6 +9,8 @@ from ..mel_processing import spec_to_mel_torch, spectrogram_torch
 
 from ..utils import load_filepaths, load_wav_to_torch
 
+resamplers = {}
+
 def load_audio(filename: str, sr: Optional[int] = None):
     global resamplers
     audio, sampling_rate = load_wav_to_torch(filename)
