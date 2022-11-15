@@ -23,4 +23,4 @@ if __name__ == "__main__":
             audio_path = audio_path.replace("\\", "/")
             f.write(f"{audio_path}\n")
     
-    print(f"Total time: {total_time}s")
+    print(f"Total time: {total_time//3600}h")
