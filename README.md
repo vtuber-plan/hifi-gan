@@ -5,6 +5,8 @@ An 48kHz implementation of HiFi-GAN for Voice Conversion.
 # Example
 
 ```Python
+import torch, torchaudio
+from hifigan.mel_processing import mel_spectrogram_torch
 hifigan = torch.hub.load("vtuber-plan/hifi-gan:main", "hifigan_48k")
 wav, sr = torchaudio.load("test.wav")
 assert sr == 48000
@@ -17,6 +19,10 @@ wav_out = out.squeeze(0).cpu()
 torchaudio.save("test_out.wav", wav_out, sr)
 ```
 
+# Pretrained Model Info
+|  Name            | Dataset   | Fine-tuned |
+|  ----            | ----      |   ----     |
+|  Hifi-GAN-48k    | Universal |     No     |
 
 # LICENSE
 ```

@@ -24,10 +24,10 @@ def load_remote():
     return torch.hub.load("vtuber-plan/hifi-gan:main", "hifigan_48k", force_reload=True)
 
 # Load Remote checkpoint
-hifigan = load_remote().cuda()
+# hifigan = load_remote().cuda()
 
 # Load Local checkpoint
-# hifigan = load_local().cuda()
+hifigan = load_local().cuda()
 
 # Load audio
 wav, sr = torchaudio.load("test.wav")
@@ -41,3 +41,8 @@ out = hifigan(mel)
 wav_out = out.squeeze(0).cpu()
 
 torchaudio.save("test_out.wav", wav_out, sr)
+
+# import librosa
+# import scipy
+# audio = librosa.feature.inverse.mel_to_audio(mel.detach().cpu().numpy(), sr=sr, n_fft=2048, hop_length=512, win_length=2048)
+# torchaudio.save("test_out2.wav", torch.tensor(audio), sr)
