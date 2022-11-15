@@ -18,8 +18,8 @@ if __name__ == "__main__":
             audio = sf.SoundFile(audio_path)
             sec = audio.frames / audio.samplerate
             total_time += sec
-            # if audio.frames / audio.samplerate < 1:
-            #     continue
+            if audio.frames < 16384 * 1.2:
+                continue
             audio_path = audio_path.replace("\\", "/")
             f.write(f"{audio_path}\n")
     
