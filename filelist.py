@@ -12,10 +12,15 @@ if __name__ == "__main__":
 
     audio_files = list(glob.glob(os.path.join(args.input, "**/*.wav"), recursive=True))
 
+    total_time = 0
     with open(args.output, "w", encoding="utf-8") as f:
         for i, audio_path in enumerate(tqdm.tqdm(audio_files)):
             audio = sf.SoundFile(audio_path)
-            if audio.frames / audio.samplerate < 3:
-                continue
+            sec = audio.frames / audio.samplerate
+            total_time += sec
+            # if audio.frames / audio.samplerate < 1:
+            #     continue
             audio_path = audio_path.replace("\\", "/")
             f.write(f"{audio_path}\n")
+    
+    print(f"Total time: {total_time}s")

@@ -32,7 +32,7 @@ device = "cpu"
 hifigan = load_local().to(device)
 
 # Load audio
-wav, sr = torchaudio.load("7200000318_0_generated.wav")
+wav, sr = torchaudio.load("zszy_48k.wav")
 assert sr == 48000
 
 mel = mel_spectrogram_torch(wav, 2048, 256, 48000, 512, 2048, 0, None, False)
