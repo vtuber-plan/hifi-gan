@@ -23,19 +23,21 @@ def load_local():
 def load_remote():
     return torch.hub.load("vtuber-plan/hifi-gan:main", "hifigan_48k", force_reload=True)
 
+device = "cpu"
+
 # Load Remote checkpoint
 # hifigan = load_remote().cuda()
 
 # Load Local checkpoint
-hifigan = load_local().cuda()
+hifigan = load_local().to(device)
 
 # Load audio
-wav, sr = torchaudio.load("test.wav")
+wav, sr = torchaudio.load("7200000318_0_generated.wav")
 assert sr == 48000
 
 mel = mel_spectrogram_torch(wav, 2048, 256, 48000, 512, 2048, 0, None, False)
 
-mel = mel.cuda()
+mel = mel.to(device)
 out = hifigan(mel)
 
 wav_out = out.squeeze(0).cpu()
