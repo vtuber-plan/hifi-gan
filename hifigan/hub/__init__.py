@@ -19,7 +19,7 @@ def hifigan_48k(
         ],
         upsample_rates=[8,8,4,2],
         upsample_initial_channel=512,
-        upsample_kernel_sizes=[16,16,4,4]
+        upsample_kernel_sizes=[16,16,8,4]
         )
     if pretrained:
         checkpoint = torch.hub.load_state_dict_from_url(

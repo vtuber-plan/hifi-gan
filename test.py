@@ -9,7 +9,7 @@ def load_local():
     if os.path.exists("logs/lightning_logs"):
         versions = glob.glob("logs/lightning_logs/version_*")
         if len(list(versions)) > 0:
-            last_ver = sorted(list(versions))[-1]
+            last_ver = sorted(list(versions), key=lambda p: int(p.split("_")[-1]))[-1]
             last_ckpt = os.path.join(last_ver, "checkpoints/last.ckpt")
             if os.path.exists(last_ckpt):
                 ckpt_path = last_ckpt
@@ -32,7 +32,7 @@ device = "cpu"
 hifigan = load_local().to(device)
 
 # Load audio
-wav, sr = torchaudio.load("test.wav")
+wav, sr = torchaudio.load("zszy_48k.wav")
 assert sr == 48000
 
 mel = mel_spectrogram_torch(wav, 2048, 256, 48000, 512, 2048, 0, None, False)

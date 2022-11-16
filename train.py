@@ -47,8 +47,9 @@ def main():
     valid_loader = DataLoader(valid_dataset, batch_size=1, num_workers=16, shuffle=False, pin_memory=True, collate_fn=collate_fn)
 
     model = HifiGAN(**hparams)
+    # model = HifiGAN.load_from_checkpoint(checkpoint_path="logs/lightning_logs/version_10/checkpoints/last.ckpt", strict=False)
 
-    checkpoint_callback = ModelCheckpoint(dirpath=None, save_last=True, every_n_train_steps=2000)
+    checkpoint_callback = ModelCheckpoint(dirpath=None, save_last=True, every_n_train_steps=2000, save_weights_only=False)
 
     devices = [int(n.strip()) for n in args.device.split(",")]
     trainer_params = {
@@ -76,7 +77,7 @@ def main():
     if os.path.exists("logs/lightning_logs"):
         versions = glob.glob("logs/lightning_logs/version_*")
         if len(list(versions)) > 0:
-            last_ver = sorted(list(versions))[-1]
+            last_ver = sorted(list(versions), key=lambda p: int(p.split("_")[-1]))[-1]
             last_ckpt = os.path.join(last_ver, "checkpoints/last.ckpt")
             if os.path.exists(last_ckpt):
                 ckpt_path = last_ckpt
