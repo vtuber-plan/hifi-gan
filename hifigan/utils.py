@@ -3,7 +3,7 @@ import logging
 import sys
 import torch
 import torchaudio
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 MATPLOTLIB_FLAG = False
 
@@ -56,3 +56,20 @@ def summarize(writer, global_step, scalars={}, histograms={}, images={}, audios=
         writer.add_image(k, v, global_step, dataformats='HWC')
     for k, v in audios.items():
         writer.add_audio(k, v, global_step, audio_sampling_rate)
+    
+
+def load_state_dict(model_state_dict, state_dict: Dict[str, Any]) -> None:
+    is_changed = False
+    for k in state_dict:
+        if k in model_state_dict:
+            if state_dict[k].shape != model_state_dict[k].shape:
+                logging.info(f"Skip loading parameter: {k}, "
+                            f"required shape: {model_state_dict[k].shape}, "
+                            f"loaded shape: {state_dict[k].shape}")
+                # state_dict[k] = model_state_dict[k]
+                del state_dict[k]
+                is_changed = True
+        else:
+            logging.info(f"Dropping parameter {k}")
+            is_changed = True
+    return state_dict

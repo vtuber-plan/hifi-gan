@@ -20,6 +20,7 @@ from pytorch_lightning.profiler import SimpleProfiler, AdvancedProfiler
 
 from hifigan.hparams import HParams
 from hifigan.data.dataset import MelDataset, MelDataset
+from hifigan.utils import load_state_dict
 
 def get_hparams(config_path: str) -> HParams:
     with open(config_path, "r") as f:
@@ -47,7 +48,10 @@ def main():
     valid_loader = DataLoader(valid_dataset, batch_size=1, num_workers=16, shuffle=False, pin_memory=True, collate_fn=collate_fn)
 
     model = HifiGAN(**hparams)
-    # model = HifiGAN.load_from_checkpoint(checkpoint_path="logs/lightning_logs/version_10/checkpoints/last.ckpt", strict=False)
+    # model = HifiGAN.load_from_checkpoint(checkpoint_path="logs/lightning_logs_v1/version_8/checkpoints/last.ckpt", strict=True)
+    # model.net_g._load_from_state_dict(torch.load("net_g.pt"), strict=False)
+    # model.net_period_d._load_from_state_dict(torch.load("net_period_d.pt"), strict=False)
+    # model.net_scale_d._load_from_state_dict(torch.load("net_scale_d.pt"), strict=False)
 
     checkpoint_callback = ModelCheckpoint(dirpath=None, save_last=True, every_n_train_steps=2000, save_weights_only=False)
 
