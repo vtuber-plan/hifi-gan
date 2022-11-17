@@ -21,6 +21,6 @@ def main():
                 ckpt_path = last_ckpt
     
     print(ckpt_path)
-    save("logs/lightning_logs_v1/version_8/checkpoints/last.ckpt")
+    save(ckpt_path)
 if __name__ == "__main__":
     main()
