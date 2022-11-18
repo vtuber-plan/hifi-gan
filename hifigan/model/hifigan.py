@@ -81,11 +81,11 @@ class HifiGAN(pl.LightningModule):
 
             # log
             lr = self.optim_g.param_groups[0]['lr']
-            scalar_dict = {"loss/d/total": loss_disc_all, "learning_rate": lr}
-            scalar_dict.update({"loss/d_p_r/{}".format(i): v for i, v in enumerate(losses_disc_p_r)})
-            scalar_dict.update({"loss/d_p_g/{}".format(i): v for i, v in enumerate(losses_disc_p_g)})
-            scalar_dict.update({"loss/d_s_r/{}".format(i): v for i, v in enumerate(losses_disc_s_r)})
-            scalar_dict.update({"loss/d_s_g/{}".format(i): v for i, v in enumerate(losses_disc_s_g)})
+            scalar_dict = {"train/d/loss_total": loss_disc_all, "learning_rate": lr}
+            scalar_dict.update({"train/d_p_r/{}".format(i): v for i, v in enumerate(losses_disc_p_r)})
+            scalar_dict.update({"train/d_p_g/{}".format(i): v for i, v in enumerate(losses_disc_p_g)})
+            scalar_dict.update({"train/d_s_r/{}".format(i): v for i, v in enumerate(losses_disc_s_r)})
+            scalar_dict.update({"train/d_s_g/{}".format(i): v for i, v in enumerate(losses_disc_s_g)})
 
             image_dict = {}
             
@@ -127,17 +127,17 @@ class HifiGAN(pl.LightningModule):
 
             # Logging to TensorBoard by default
             lr = self.optim_g.param_groups[0]['lr']
-            scalar_dict = {"loss/g/total": loss_gen_all, "learning_rate": lr}
+            scalar_dict = {"train/g/loss_total": loss_gen_all, "learning_rate": lr}
             scalar_dict.update({
-                "loss/g/p_fm": loss_p_fm,
-                "loss/g/s_fm": loss_s_fm,
-                "loss/g/p_gen": loss_p_gen,
-                "loss/g/s_gen": loss_s_gen,
-                "loss/g/loss_mel": loss_mel,
+                "train/g/p_fm": loss_p_fm,
+                "train/g/s_fm": loss_s_fm,
+                "train/g/p_gen": loss_p_gen,
+                "train/g/s_gen": loss_s_gen,
+                "train/g/loss_mel": loss_mel,
             })
 
-            scalar_dict.update({"loss/g/p_gen_{}".format(i): v for i, v in enumerate(losses_p_gen)})
-            scalar_dict.update({"loss/g/s_gen_{}".format(i): v for i, v in enumerate(losses_s_gen)})
+            scalar_dict.update({"train/g/p_gen_{}".format(i): v for i, v in enumerate(losses_p_gen)})
+            scalar_dict.update({"train/g/s_gen_{}".format(i): v for i, v in enumerate(losses_s_gen)})
 
             # image_dict = {
             #     "slice/mel_org": utils.plot_spectrogram_to_numpy(y_mel[0].data.cpu().numpy()),
@@ -198,9 +198,9 @@ class HifiGAN(pl.LightningModule):
         }
 
         valid_mel_loss_step = F.l1_loss(y_mel_hat, y_mel)
-        self.valid_mel_loss(valid_mel_loss_step)
+        self.valid_mel_loss.update(valid_mel_loss_step.item())
 
-        self.log("valid/loss_mel_step", valid_mel_loss_step)
+        self.log("valid/loss_mel_step", valid_mel_loss_step.item(), sync_dist=True)
 
         tensorboard = self.logger.experiment
         utils.summarize(
@@ -214,7 +214,7 @@ class HifiGAN(pl.LightningModule):
     def validation_epoch_end(self, outputs) -> None:
         self.net_g.eval()
         valid_mel_loss_epoch = self.valid_mel_loss.compute()
-        self.log("valid/loss_mel_epoch", valid_mel_loss_epoch)
+        self.log("valid/loss_mel_epoch", valid_mel_loss_epoch.item(), sync_dist=True)
         self.valid_mel_loss.reset()
 
     def configure_optimizers(self):
