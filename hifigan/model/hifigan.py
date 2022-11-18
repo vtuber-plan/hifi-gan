@@ -36,8 +36,11 @@ class HifiGAN(pl.LightningModule):
             self.hparams.model.upsample_initial_channel,
             self.hparams.model.upsample_kernel_sizes
         )
-        self.net_period_d = MultiPeriodDiscriminator(self.hparams.model.use_spectral_norm)
-        self.net_scale_d = MultiScaleDiscriminator(self.hparams.model.use_spectral_norm)
+        self.net_period_d = MultiPeriodDiscriminator(
+            periods=self.hparams.model.multi_period_discriminator_periods,
+            use_spectral_norm=self.hparams.model.use_spectral_norm
+        )
+        self.net_scale_d = MultiScaleDiscriminator(use_spectral_norm=self.hparams.model.use_spectral_norm)
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int, optimizer_idx: int):
         x_mel, x_mel_lengths = batch["x_mel_values"], batch["x_mel_lengths"]
@@ -63,11 +66,11 @@ class HifiGAN(pl.LightningModule):
         # Discriminator
         if optimizer_idx == 0:
             # MPD
-            y_dp_hat_r, y_dp_hat_g, _, _ = self.net_period_d(y_wav, y_hat)
+            y_dp_hat_r, y_dp_hat_g, _, _ = self.net_period_d(y_wav, y_hat.detach())
             loss_disc_p, losses_disc_p_r, losses_disc_p_g = discriminator_loss(y_dp_hat_r, y_dp_hat_g)
 
             # MSD
-            y_ds_hat_r, y_ds_hat_g, _, _ = self.net_scale_d(y_wav, y_hat)
+            y_ds_hat_r, y_ds_hat_g, _, _ = self.net_scale_d(y_wav, y_hat.detach())
             loss_disc_s, losses_disc_s_r, losses_disc_s_g = discriminator_loss(y_ds_hat_r, y_ds_hat_g)
 
             loss_disc_all = loss_disc_p + loss_disc_s
@@ -114,7 +117,7 @@ class HifiGAN(pl.LightningModule):
             )
 
             # mel
-            loss_mel = F.l1_loss(y_mel_hat, y_mel) * 45
+            loss_mel = F.l1_loss(y_mel_hat, y_mel) * self.hparams.train.c_mel
 
             loss_gen_all = (loss_s_gen + loss_s_fm) + (loss_p_gen + loss_p_fm) + loss_mel
 
@@ -132,7 +135,7 @@ class HifiGAN(pl.LightningModule):
             scalar_dict.update({"loss/g/p_gen_{}".format(i): v for i, v in enumerate(losses_p_gen)})
             scalar_dict.update({"loss/g/s_gen_{}".format(i): v for i, v in enumerate(losses_s_gen)})
 
-            # image_dict = { 
+            # image_dict = {
             #     "slice/mel_org": utils.plot_spectrogram_to_numpy(y_mel[0].data.cpu().numpy()),
             #     "slice/mel_gen": utils.plot_spectrogram_to_numpy(y_mel_hat[0].data.cpu().numpy()), 
             #     "all/mel": utils.plot_spectrogram_to_numpy(mel[0].data.cpu().numpy())
@@ -146,8 +149,6 @@ class HifiGAN(pl.LightningModule):
                 images=image_dict,
                 scalars=scalar_dict)
             return loss_gen_all
-
-        
 
     def validation_step(self, batch, batch_idx):
         self.net_g.eval()
@@ -163,18 +164,18 @@ class HifiGAN(pl.LightningModule):
         y_spec_lengths = (y_wav_lengths / self.hparams.data.hop_length).long()
 
         # remove else
-        y_hat = self.net_g(x_mel)
-        y_hat_lengths = torch.tensor([y_hat.shape[2]], dtype=torch.long)
+        y_wav_hat = self.net_g(x_mel)
+        y_hat_lengths = torch.tensor([y_wav_hat.shape[2]], dtype=torch.long)
 
-        mel = spec_to_mel_torch(
+        y_mel = spec_to_mel_torch(
             y_spec, 
             self.hparams.data.filter_length, 
             self.hparams.data.n_mel_channels, 
             self.hparams.data.sampling_rate,
             self.hparams.data.mel_fmin, 
             self.hparams.data.mel_fmax)
-        y_hat_mel = mel_spectrogram_torch(
-            y_hat.squeeze(1).float(),
+        y_mel_hat = mel_spectrogram_torch(
+            y_wav_hat.squeeze(1).float(),
             self.hparams.data.filter_length,
             self.hparams.data.n_mel_channels,
             self.hparams.data.sampling_rate,
@@ -184,14 +185,17 @@ class HifiGAN(pl.LightningModule):
             self.hparams.data.mel_fmax
         )
         image_dict = {
-            "gen/mel": utils.plot_spectrogram_to_numpy(y_hat_mel[0].cpu().numpy())
+            "gen/mel": utils.plot_spectrogram_to_numpy(y_mel_hat[0].cpu().numpy()),
+            "gt/mel": utils.plot_spectrogram_to_numpy(y_mel[0].cpu().numpy())
         }
         audio_dict = {
-            "gen/audio": y_hat[0,:,:y_hat_lengths[0]]
+            "gen/audio": y_wav_hat[0,:,:y_hat_lengths[0]],
+            "gt/audio": y_wav[0,:,:y_wav_lengths[0]]
         }
 
-        image_dict.update({"gt/mel": utils.plot_spectrogram_to_numpy(mel[0].cpu().numpy())})
-        audio_dict.update({"gt/audio": y_wav[0,:,:y_wav_lengths[0]]})
+        scalar_dict = {
+            "valid/loss_mel": F.l1_loss(y_mel_hat, y_mel)
+        }
 
         tensorboard = self.logger.experiment
         utils.summarize(
@@ -199,7 +203,8 @@ class HifiGAN(pl.LightningModule):
             global_step=self.global_step, 
             images=image_dict,
             audios=audio_dict,
-            audio_sampling_rate=self.hparams.data.sampling_rate)
+            audio_sampling_rate=self.hparams.data.sampling_rate,
+            scalars=scalar_dict)
 
     def configure_optimizers(self):
         self.optim_g = torch.optim.AdamW(

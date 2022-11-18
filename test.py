@@ -26,10 +26,10 @@ def load_remote():
 device = "cpu"
 
 # Load Remote checkpoint
-hifigan = load_remote().to(device)
+# hifigan = load_remote().to(device)
 
 # Load Local checkpoint
-# hifigan = load_local().to(device)
+hifigan = load_local().to(device)
 
 # Load audio
 wav, sr = torchaudio.load("zszy_48k.wav")

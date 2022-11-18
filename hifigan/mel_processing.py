@@ -16,9 +16,6 @@ import torchaudio
 
 import logging
 
-MAX_WAV_VALUE = 32768.0
-
-
 def dynamic_range_compression_torch(x, C=1, clip_val=1e-5):
     """
     PARAMS

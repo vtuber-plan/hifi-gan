@@ -1,4 +1,5 @@
 
+from typing import List
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -6,10 +7,9 @@ from torch.nn import functional as F
 from .discriminator import DiscriminatorP, DiscriminatorS
 
 class MultiPeriodDiscriminator(torch.nn.Module):
-    def __init__(self, use_spectral_norm=False):
+    def __init__(self, periods: List[int]=[2, 3, 5, 7, 11, 17, 23, 37], use_spectral_norm: bool=False):
         super(MultiPeriodDiscriminator, self).__init__()
-        periods = [2,3,5,7,11]
-
+        self.periods = periods
         discs = [DiscriminatorS(use_spectral_norm=use_spectral_norm)]
         discs = discs + [DiscriminatorP(i, use_spectral_norm=use_spectral_norm) for i in periods]
         self.discriminators = nn.ModuleList(discs)
