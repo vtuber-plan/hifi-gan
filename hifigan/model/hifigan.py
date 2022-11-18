@@ -12,6 +12,7 @@ import torchaudio.transforms as T
 import random
 
 import pytorch_lightning as pl
+import torchmetrics
 
 from .discriminators.multi_scale_discriminator import MultiScaleDiscriminator
 from .discriminators.multi_period_discriminator import MultiPeriodDiscriminator
@@ -41,6 +42,9 @@ class HifiGAN(pl.LightningModule):
             use_spectral_norm=self.hparams.model.use_spectral_norm
         )
         self.net_scale_d = MultiScaleDiscriminator(use_spectral_norm=self.hparams.model.use_spectral_norm)
+
+        # metrics
+        self.valid_mel_loss = torchmetrics.MeanMetric()
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int, optimizer_idx: int):
         x_mel, x_mel_lengths = batch["x_mel_values"], batch["x_mel_lengths"]
@@ -193,9 +197,10 @@ class HifiGAN(pl.LightningModule):
             "gt/audio": y_wav[0,:,:y_wav_lengths[0]]
         }
 
-        scalar_dict = {
-            "valid/loss_mel": F.l1_loss(y_mel_hat, y_mel)
-        }
+        valid_mel_loss_step = F.l1_loss(y_mel_hat, y_mel)
+        self.valid_mel_loss(valid_mel_loss_step)
+
+        self.log("valid/loss_mel_step", valid_mel_loss_step)
 
         tensorboard = self.logger.experiment
         utils.summarize(
@@ -204,7 +209,13 @@ class HifiGAN(pl.LightningModule):
             images=image_dict,
             audios=audio_dict,
             audio_sampling_rate=self.hparams.data.sampling_rate,
-            scalars=scalar_dict)
+        )
+    
+    def validation_epoch_end(self, outputs) -> None:
+        self.net_g.eval()
+        valid_mel_loss_epoch = self.valid_mel_loss.compute()
+        self.log("valid/loss_mel_epoch", valid_mel_loss_epoch)
+        self.valid_mel_loss.reset()
 
     def configure_optimizers(self):
         self.optim_g = torch.optim.AdamW(

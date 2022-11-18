@@ -24,6 +24,15 @@ torchaudio.save("test_out.wav", wav_out, sr)
 |  ----            | ----      |   ----     |
 |  Hifi-GAN-48k    | Universal |     No     |
 
+# Train Vocoder
+Place all audio files under the dataset folder.
+Then run these commands:
+```bash
+python filelist.py
+python split.py
+python train.py
+```
+
 # LICENSE
 ```
 MIT License
@@ -49,7 +58,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-# Credit
+# Credits
 Hifi-GAN models from [jik876](https://github.com/jik876/hifi-gan).
 
 Inspired by [SOVITS](https://github.com/innnky/so-vits-svc) and [Diff-SVC](https://github.com/prophesier/diff-svc).

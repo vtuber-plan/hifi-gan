@@ -55,7 +55,7 @@ def main():
     devices = [int(n.strip()) for n in args.device.split(",")]
 
     checkpoint_callback = ModelCheckpoint(dirpath=None, save_last=True, every_n_train_steps=2000, save_weights_only=False)
-    earlystop_callback = EarlyStopping(monitor="valid/loss_wav", mode="min", patience=3)
+    earlystop_callback = EarlyStopping(monitor="valid/loss_mel_epoch", mode="min", patience=3)
 
     trainer_params = {
         "accelerator": args.accelerator,
