@@ -21,7 +21,7 @@ from .generators.generator import Generator
 from ..mel_processing import spec_to_mel_torch, mel_spectrogram_torch, spectrogram_torch, spectrogram_torch_audio
 from .losses import discriminator_loss, kl_loss,feature_loss, generator_loss
 from .. import utils
-from .commons import slice_segments, rand_slice_segments
+from .commons import slice_segments, rand_slice_segments, sequence_mask
 
 class HifiGAN(pl.LightningModule):
     def __init__(self, **kwargs):
@@ -197,7 +197,9 @@ class HifiGAN(pl.LightningModule):
             "gt/audio": y_wav[0,:,:y_wav_lengths[0]]
         }
 
-        valid_mel_loss_step = F.l1_loss(y_mel_hat, y_mel)
+        mel_mask = torch.unsqueeze(sequence_mask(x_mel_lengths.long(), y_mel.size(2)), 1).to(y_mel.dtype)
+
+        valid_mel_loss_step = F.l1_loss(y_mel_hat * mel_mask, y_mel * mel_mask)
         self.valid_mel_loss.update(valid_mel_loss_step.item())
 
         self.log("valid/loss_mel_step", valid_mel_loss_step.item(), sync_dist=True)
