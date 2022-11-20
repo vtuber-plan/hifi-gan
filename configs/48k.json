@@ -9,10 +9,10 @@
       "eval_interval": 1000,
       "seed": 1234,
       "max_epochs": 20000,
-      "learning_rate": 0.0008,
+      "learning_rate": 0.0002,
       "betas": [0.8, 0.99],
       "eps": 1e-9,
-      "batch_size": 128,
+      "batch_size": 16,
       "fp16_run": true,
       "lr_decay": 0.999875,
       "segment_size": 16384,
@@ -33,10 +33,6 @@
     },
     "model": {
       "inter_channels": 256,
-      "hidden_channels": 256,
-      "filter_channels": 768,
-      "kernel_size": 3,
-      "p_dropout": 0.1,
       "resblock": "1",
       "resblock_kernel_sizes": [3,7,11],
       "resblock_dilation_sizes": [

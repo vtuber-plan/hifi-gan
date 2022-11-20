@@ -17,10 +17,12 @@ if __name__ == "__main__":
         for i, audio_path in enumerate(tqdm.tqdm(audio_files)):
             audio = sf.SoundFile(audio_path)
             sec = audio.frames / audio.samplerate
-            total_time += sec
             if audio.frames < 16384 * 1.2:
                 continue
+            # if sec > 30:
+            #     continue
             audio_path = audio_path.replace("\\", "/")
             f.write(f"{audio_path}\n")
+            total_time += sec
     
     print(f"Total time: {total_time//3600}h")
