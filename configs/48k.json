@@ -27,12 +27,12 @@
       "filter_length": 2048,
       "hop_length": 512,
       "win_length": 2048,
-      "n_mel_channels": 256,
+      "n_mel_channels": 128,
       "mel_fmin": 0.0,
       "mel_fmax": null
     },
     "model": {
-      "inter_channels": 256,
+      "inter_channels": 128,
       "resblock": "1",
       "resblock_kernel_sizes": [3,7,11],
       "resblock_dilation_sizes": [
