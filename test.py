@@ -35,7 +35,7 @@ hifigan = load_local().to(device)
 wav, sr = torchaudio.load("zszy_48k.wav")
 assert sr == 48000
 
-mel = mel_spectrogram_torch(wav, 2048, 256, 48000, 512, 2048, 0, None, False)
+mel = mel_spectrogram_torch(wav, 2048, 128, 48000, 512, 2048, 0, None, False)
 
 mel = mel.to(device)
 out = hifigan(mel)

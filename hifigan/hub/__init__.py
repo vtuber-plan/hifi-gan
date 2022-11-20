@@ -9,7 +9,7 @@ def hifigan_48k(
     progress: bool = True,
 ) -> Generator:
     hifigan = Generator(
-        initial_channel=256,
+        initial_channel=128,
         resblock="1",
         resblock_kernel_sizes=[3,7,11],
         resblock_dilation_sizes=[
