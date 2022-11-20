@@ -22,6 +22,7 @@ from ..mel_processing import spec_to_mel_torch, mel_spectrogram_torch, spectrogr
 from .losses import discriminator_loss, kl_loss,feature_loss, generator_loss
 from .. import utils
 from .commons import slice_segments, rand_slice_segments, sequence_mask
+from .pipeline import AudioPipeline
 
 class HifiGAN(pl.LightningModule):
     def __init__(self, **kwargs):
@@ -43,12 +44,25 @@ class HifiGAN(pl.LightningModule):
         )
         self.net_scale_d = MultiScaleDiscriminator(use_spectral_norm=self.hparams.model.use_spectral_norm)
 
+        self.audio_pipeline = AudioPipeline(freq=self.hparams.data.sampling_rate,
+                                            n_fft=self.hparams.data.filter_length,
+                                            n_mel=self.hparams.data.n_mel_channels,
+                                            win_length=self.hparams.data.win_length,
+                                            hop_length=self.hparams.data.hop_length,
+                                            device=self.device)
+        for param in self.audio_pipeline.parameters():
+            param.requires_grad = False
+
         # metrics
         self.valid_mel_loss = torchmetrics.MeanMetric()
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int, optimizer_idx: int):
-        x_mel, x_mel_lengths = batch["x_mel_values"], batch["x_mel_lengths"]
+        x_wav, x_wav_lengths = batch["x_wav_values"], batch["x_wav_lengths"]
         y_wav, y_wav_lengths = batch["y_wav_values"], batch["y_wav_lengths"]
+        
+        with torch.inference_mode():
+            x_mel = self.audio_pipeline(x_wav.squeeze(1))
+            x_mel_lengths = (x_wav_lengths / self.hparams.data.hop_length).long()
 
         x_mel, ids_slice = rand_slice_segments(x_mel, x_mel_lengths, self.hparams.train.segment_size // self.hparams.data.hop_length)
         y_wav = slice_segments(y_wav, ids_slice * self.hparams.data.hop_length, self.hparams.train.segment_size) # slice 
@@ -157,8 +171,12 @@ class HifiGAN(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         self.net_g.eval()
         
-        x_mel, x_mel_lengths = batch["x_mel_values"], batch["x_mel_lengths"]
+        x_wav, x_wav_lengths = batch["x_wav_values"], batch["x_wav_lengths"]
         y_wav, y_wav_lengths = batch["y_wav_values"], batch["y_wav_lengths"]
+        
+        with torch.inference_mode():
+            x_mel = self.audio_pipeline(x_wav.squeeze(1))
+            x_mel_lengths = (x_wav_lengths / self.hparams.data.hop_length).long()
 
         y_spec = spectrogram_torch_audio(y_wav.squeeze(1),
             self.hparams.data.filter_length,

@@ -50,15 +50,14 @@ class MelDataset(torch.utils.data.Dataset):
         audio_wav = load_audio(audio_path, sr=self.sampling_rate)
         audio_wav = audio_wav.unsqueeze(0)
 
-        audio_spec = spectrogram_torch(audio_wav, self.filter_length, self.sampling_rate, self.hop_length, self.win_length, center=False)
-        audio_spec = torch.squeeze(audio_spec, 0)
+        # audio_spec = spectrogram_torch(audio_wav, self.filter_length, self.sampling_rate, self.hop_length, self.win_length, center=False)
+        # audio_spec = torch.squeeze(audio_spec, 0)
 
-        audio_mel = spec_to_mel_torch(audio_spec, self.filter_length, self.n_mel_channels, self.sampling_rate, self.mel_fmin, self.mel_fmax)
-        audio_mel = torch.squeeze(audio_mel, 0)
+        # audio_mel = spec_to_mel_torch(audio_spec, self.filter_length, self.n_mel_channels, self.sampling_rate, self.mel_fmin, self.mel_fmax)
+        # audio_mel = torch.squeeze(audio_mel, 0)
 
         return {
-            "wav": audio_wav,
-            "mel": audio_mel,
+            "wav": audio_wav
         }
 
     def __getitem__(self, index):
