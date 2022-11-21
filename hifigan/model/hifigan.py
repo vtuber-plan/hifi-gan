@@ -49,7 +49,7 @@ class HifiGAN(pl.LightningModule):
                                             n_mel=self.hparams.data.n_mel_channels,
                                             win_length=self.hparams.data.win_length,
                                             hop_length=self.hparams.data.hop_length,
-                                            device=self.device)
+                                            aug=True)
         for param in self.audio_pipeline.parameters():
             param.requires_grad = False
 

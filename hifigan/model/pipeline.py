@@ -18,12 +18,12 @@ class AudioPipeline(torch.nn.Module):
         n_mel=128,
         win_length=1024,
         hop_length=256,
-        device="cpu",
+        aug=False
     ):
         super().__init__()
 
         self.freq=freq
-        self.device=device
+        self.aug=aug
 
         pad = int((n_fft-hop_length)/2)
         self.spec = T.Spectrogram(n_fft=n_fft, win_length=win_length, hop_length=hop_length,
@@ -43,7 +43,8 @@ class AudioPipeline(torch.nn.Module):
         spec = self.spec(shift_waveform)
         spec = torch.sqrt(spec.real.pow(2) + spec.imag.pow(2) + 1e-6)
         # Apply SpecAugment
-        spec = self.spec_aug(spec)
+        if self.aug:
+            spec = self.spec_aug(spec)
         # Convert to mel-scale
         mel = self.mel_scale(spec)
         return mel

@@ -5,17 +5,55 @@ An 48kHz implementation of HiFi-GAN for Voice Conversion.
 # Example
 
 ```Python
-import torch, torchaudio
-from hifigan.mel_processing import mel_spectrogram_torch
-hifigan = torch.hub.load("vtuber-plan/hifi-gan:main", "hifigan_48k")
+import torch
+import os
+import torchaudio
+import torchaudio.transforms as T
+
+class AudioPipeline(torch.nn.Module):
+    def __init__(
+        self,
+        freq=16000,
+        n_fft=1024,
+        n_mel=128,
+        win_length=1024,
+        hop_length=256,
+    ):
+        super().__init__()
+        self.freq=freq
+        pad = int((n_fft-hop_length)/2)
+        self.spec = T.Spectrogram(n_fft=n_fft, win_length=win_length, hop_length=hop_length,
+            pad=pad, power=None,center=False, pad_mode='reflect', normalized=False, onesided=True)
+
+        self.mel_scale = T.MelScale(n_mels=n_mel, sample_rate=freq, n_stft=n_fft // 2 + 1)
+
+    def forward(self, waveform: torch.Tensor) -> torch.Tensor:
+        shift_waveform = waveform
+        # Convert to power spectrogram
+        spec = self.spec(shift_waveform)
+        spec = torch.sqrt(spec.real.pow(2) + spec.imag.pow(2) + 1e-6)
+        # Convert to mel-scale
+        mel = self.mel_scale(spec)
+        return mel
+
+device = "cpu"
+
+hifigan = torch.hub.load("vtuber-plan/hifi-gan:v0.2.0", "hifigan_48k", force_reload=True).to(device)
+
+# Load audio
 wav, sr = torchaudio.load("test.wav")
 assert sr == 48000
 
-mel = mel_spectrogram_torch(wav, 2048, 256, 48000, 512, 2048, 0, None, False)
-mel = mel.cuda()
+audio_pipeline = AudioPipeline(freq=48000,
+                                n_fft=2048,
+                                n_mel=128,
+                                win_length=2048,
+                                hop_length=512)
+mel = audio_pipeline(wav)
 out = hifigan(mel)
 
 wav_out = out.squeeze(0).cpu()
+
 torchaudio.save("test_out.wav", wav_out, sr)
 ```
 
