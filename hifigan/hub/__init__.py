@@ -1,5 +1,5 @@
 CKPT_URLS = {
-    "hifigan-48k": "https://github.com/vtuber-plan/hifi-gan/releases/download/v0.2.0/hifigan-48k-C8FDBD55FE7700384955A6EC41AF1D84.pt",
+    "hifigan-48k": "https://github.com/vtuber-plan/hifi-gan/releases/download/v0.2.1/hifigan-48k-C8FDBD55FE7700384955A6EC41AF1D84.pt",
 }
 import torch
 from ..model.generators.generator import Generator
@@ -17,9 +17,9 @@ def hifigan_48k(
             [1,3,5],
             [1,3,5]
         ],
-        upsample_rates=[8,8,4,2],
+        upsample_rates=[8,8,2,2,2],
         upsample_initial_channel=512,
-        upsample_kernel_sizes=[16,16,8,4]
+        upsample_kernel_sizes=[16,16,4,4,4]
         )
     if pretrained:
         checkpoint = torch.hub.load_state_dict_from_url(

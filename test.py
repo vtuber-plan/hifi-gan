@@ -51,7 +51,7 @@ def load_local():
     return model.net_g
 
 def load_remote():
-    return torch.hub.load("vtuber-plan/hifi-gan:v0.2.0", "hifigan_48k", force_reload=True)
+    return torch.hub.load("vtuber-plan/hifi-gan:v0.2.1", "hifigan_48k", force_reload=True)
 
 device = "cpu"
 
