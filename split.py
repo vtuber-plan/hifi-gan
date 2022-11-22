@@ -4,7 +4,7 @@ import os
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', type=str, default="./filelists/example_audio_filelist.txt", help='filelist path')
+    parser.add_argument('-i', '--input', type=str, default="./filelists/48k_audio_filelist.txt", help='filelist path')
     parser.add_argument('-o', '--output', type=str, default="./filelists", help='File list output path')
     args = parser.parse_args()
 

@@ -51,7 +51,7 @@ def load_local():
     return model.net_g
 
 def load_remote():
-    return torch.hub.load("vtuber-plan/hifi-gan:v0.2.1", "hifigan_48k", force_reload=True)
+    return torch.hub.load("vtuber-plan/hifi-gan:v0.3.0", "hifigan_48k", force_reload=True)
 
 device = "cpu"
 
@@ -62,7 +62,7 @@ device = "cpu"
 hifigan = load_local().to(device)
 
 # Load audio
-wav, sr = torchaudio.load("zszy_48k.wav")
+wav, sr = torchaudio.load("7200000318_0_generated.wav")
 assert sr == 48000
 
 # mel = mel_spectrogram_torch(wav, 2048, 128, 48000, 512, 2048, 0, None, False)
@@ -76,7 +76,7 @@ out = hifigan(mel)
 
 wav_out = out.squeeze(0).cpu()
 
-torchaudio.save("test_out.wav", wav_out, sr)
+torchaudio.save("test_out2.wav", wav_out, sr)
 
 # import librosa
 # import scipy

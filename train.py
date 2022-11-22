@@ -1,5 +1,4 @@
 
-
 import os
 import json
 import glob
@@ -32,10 +31,10 @@ def get_hparams(config_path: str) -> HParams:
     hparams = HParams(**config)
     return hparams
 
-def last_checkpoint() -> Optional[str]:
+def last_checkpoint(path: str) -> Optional[str]:
     ckpt_path = None
-    if os.path.exists("logs/lightning_logs"):
-        versions = glob.glob("logs/lightning_logs/version_*")
+    if os.path.exists(os.path.join(path, "lightning_logs")):
+        versions = glob.glob(os.path.join(path, "lightning_logs", "version_*"))
         if len(list(versions)) > 0:
             last_ver = sorted(list(versions), key=lambda p: int(p.split("_")[-1]))[-1]
             last_ckpt = os.path.join(last_ver, "checkpoints/last.ckpt")
@@ -46,7 +45,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, default="./configs/48k.json", help='JSON file for configuration')
     parser.add_argument('-a', '--accelerator', type=str, default="gpu", help='training device')
-    parser.add_argument('-d', '--device', type=str, default="6", help='training device ids')
+    parser.add_argument('-d', '--device', type=str, default="0", help='training device ids')
     args = parser.parse_args()
 
     hparams = get_hparams(args.config)
@@ -100,7 +99,7 @@ def main():
     # profiler = AdvancedProfiler(filename="profile.txt")
     trainer = pl.Trainer(**trainer_params) # , profiler=profiler, max_steps=200
     # resume training
-    ckpt_path = last_checkpoint()
+    ckpt_path = last_checkpoint(hparams.trainer.default_root_dir)
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader, ckpt_path=ckpt_path)
 
 if __name__ == "__main__":
