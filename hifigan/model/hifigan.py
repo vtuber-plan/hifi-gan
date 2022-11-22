@@ -48,11 +48,10 @@ class HifiGAN(pl.LightningModule):
                                             n_fft=self.hparams.data.filter_length,
                                             n_mel=self.hparams.data.n_mel_channels,
                                             win_length=self.hparams.data.win_length,
-                                            hop_length=self.hparams.data.hop_length,
-                                            aug=True)
+                                            hop_length=self.hparams.data.hop_length)
         for param in self.audio_pipeline.parameters():
             param.requires_grad = False
-
+        
         # metrics
         self.valid_mel_loss = torchmetrics.MeanMetric()
 
@@ -61,7 +60,7 @@ class HifiGAN(pl.LightningModule):
         y_wav, y_wav_lengths = batch["y_wav_values"], batch["y_wav_lengths"]
         
         with torch.inference_mode():
-            x_mel = self.audio_pipeline(x_wav.squeeze(1))
+            x_mel = self.audio_pipeline(x_wav.squeeze(1), aug=True)
             x_mel_lengths = (x_wav_lengths / self.hparams.data.hop_length).long()
 
         x_mel, ids_slice = rand_slice_segments(x_mel, x_mel_lengths, self.hparams.train.segment_size // self.hparams.data.hop_length)
@@ -175,7 +174,7 @@ class HifiGAN(pl.LightningModule):
         y_wav, y_wav_lengths = batch["y_wav_values"], batch["y_wav_lengths"]
         
         with torch.inference_mode():
-            x_mel = self.audio_pipeline(x_wav.squeeze(1))
+            x_mel = self.audio_pipeline(x_wav.squeeze(1), aug=False)
             x_mel_lengths = (x_wav_lengths / self.hparams.data.hop_length).long()
 
         y_spec = spectrogram_torch_audio(y_wav.squeeze(1),

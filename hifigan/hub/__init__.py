@@ -1,5 +1,5 @@
 CKPT_URLS = {
-    "hifigan-48k": "https://github.com/vtuber-plan/hifi-gan/releases/download/v0.2.1/hifigan-48k-C8FDBD55FE7700384955A6EC41AF1D84.pt",
+    "hifigan-48k": "https://github.com/vtuber-plan/hifi-gan/releases/download/v0.3.0/hifigan-48k-B67C217083569F978E07EFD1AD7B1766.pt",
 }
 import torch
 from ..model.generators.generator import Generator

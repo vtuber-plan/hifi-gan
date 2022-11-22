@@ -38,7 +38,7 @@ class AudioPipeline(torch.nn.Module):
 
 device = "cpu"
 
-hifigan = torch.hub.load("vtuber-plan/hifi-gan:v0.2.1", "hifigan_48k", force_reload=True).to(device)
+hifigan = torch.hub.load("vtuber-plan/hifi-gan:v0.3.0", "hifigan_48k", force_reload=True).to(device)
 
 # Load audio
 wav, sr = torchaudio.load("test.wav")

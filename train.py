@@ -54,8 +54,11 @@ def main():
 
     devices = [int(n.strip()) for n in args.device.split(",")]
 
-    checkpoint_callback = ModelCheckpoint(dirpath=None, save_last=True, every_n_train_steps=2000, save_weights_only=False)
-    earlystop_callback = EarlyStopping(monitor="valid/loss_mel_epoch", mode="min", patience=7)
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=None, save_last=True, every_n_train_steps=2000, save_weights_only=False,
+        monitor="valid/loss_mel_epoch", mode="min", save_top_k=3
+    )
+    earlystop_callback = EarlyStopping(monitor="valid/loss_mel_epoch", mode="min", patience=3)
 
     trainer_params = {
         "accelerator": args.accelerator,
@@ -84,7 +87,7 @@ def main():
         batch_per_gpu = hparams.train.batch_size // len(devices)
     else:
         batch_per_gpu = hparams.train.batch_size
-    train_loader = DataLoader(train_dataset, batch_size=batch_per_gpu, num_workers=4, shuffle=True, pin_memory=True, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=batch_per_gpu, num_workers=8, shuffle=True, pin_memory=True, collate_fn=collate_fn)
     valid_loader = DataLoader(valid_dataset, batch_size=4, num_workers=4, shuffle=False, pin_memory=True, collate_fn=collate_fn)
 
     # model
