@@ -46,6 +46,7 @@ def main():
     parser.add_argument('-c', '--config', type=str, default="./configs/48k.json", help='JSON file for configuration')
     parser.add_argument('-a', '--accelerator', type=str, default="gpu", help='training device')
     parser.add_argument('-d', '--device', type=str, default="0", help='training device ids')
+    parser.add_argument('-n', '--num-nodes', type=int, default=1, help='training node number')
     args = parser.parse_args()
 
     hparams = get_hparams(args.config)
@@ -75,6 +76,8 @@ def main():
     if hparams.train.fp16_run:
         trainer_params["amp_backend"] = "native"
         trainer_params["precision"] = 16
+    
+    trainer_params["num_nodes"] = args.num_nodes
 
     # data
     train_dataset = MelDataset(hparams.data.training_files, hparams.data)

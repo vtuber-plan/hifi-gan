@@ -1,3 +1,10 @@
+import sys
+import os
+
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+)
+
 import torch
 import os
 import glob
@@ -62,7 +69,7 @@ device = "cpu"
 hifigan = load_local().to(device)
 
 # Load audio
-wav, sr = torchaudio.load("zszy_48k.wav")
+wav, sr = torchaudio.load("7200000318_0_generated.wav")
 assert sr == 48000
 
 # mel = mel_spectrogram_torch(wav, 2048, 128, 48000, 512, 2048, 0, None, False)
