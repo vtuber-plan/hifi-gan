@@ -13,6 +13,8 @@ import random
 
 import pytorch_lightning as pl
 import torchmetrics
+from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
+from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 
 from .discriminators.multi_scale_discriminator import MultiScaleDiscriminator
 from .discriminators.multi_period_discriminator import MultiPeriodDiscriminator
@@ -53,7 +55,14 @@ class HifiGAN(pl.LightningModule):
             param.requires_grad = False
         
         # metrics
+        self.nb_pesq = PerceptualEvaluationSpeechQuality(8000, 'nb')
+        self.wb_pesq = PerceptualEvaluationSpeechQuality(16000, 'wb')
+        self.stoi = ShortTimeObjectiveIntelligibility(8000, False)
+
         self.valid_mel_loss = torchmetrics.MeanMetric()
+        self.valid_pesq_nb = torchmetrics.MeanMetric()
+        self.valid_pesq_wb = torchmetrics.MeanMetric()
+        self.valid_stoi = torchmetrics.MeanMetric()
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int, optimizer_idx: int):
         x_wav, x_wav_lengths = batch["x_wav_values"], batch["x_wav_lengths"]
@@ -216,11 +225,25 @@ class HifiGAN(pl.LightningModule):
 
         mel_mask = torch.unsqueeze(sequence_mask(x_mel_lengths.long(), y_mel.size(2)), 1).to(y_mel.dtype)
 
-        valid_mel_loss_step = F.l1_loss(y_mel_hat * mel_mask, y_mel * mel_mask)
+        # metrics compute
+        y_mel_masked = y_mel * mel_mask
+        y_mel_masked_hat = y_mel_hat * mel_mask
+        valid_mel_loss_step = F.l1_loss(y_mel_masked_hat, y_mel_masked)
         self.valid_mel_loss.update(valid_mel_loss_step.item())
-
         self.log("valid/loss_mel_step", valid_mel_loss_step.item(), sync_dist=True)
 
+        valid_pesq_nb = self.nb_pesq(y_mel_masked_hat, y_mel_masked).item()
+        valid_pesq_wb = self.wb_pesq(y_mel_masked_hat, y_mel_masked).item()
+        self.valid_pesq_nb.update(valid_pesq_nb)
+        self.log("valid/pesq_nb_step", valid_pesq_nb, sync_dist=True)
+        self.valid_pesq_wb.update(valid_pesq_nb)
+        self.log("valid/pesq_wb_step", valid_pesq_wb, sync_dist=True)
+
+        valid_stoi = self.stoi(y_mel_masked_hat, y_mel_masked).item()
+        self.valid_stoi.update(valid_stoi)
+        self.log("valid/valid_stoi_step", valid_stoi, sync_dist=True)
+
+        # logging
         tensorboard = self.logger.experiment
         utils.summarize(
             writer=tensorboard,
@@ -235,6 +258,18 @@ class HifiGAN(pl.LightningModule):
         valid_mel_loss_epoch = self.valid_mel_loss.compute()
         self.log("valid/loss_mel_epoch", valid_mel_loss_epoch.item(), sync_dist=True)
         self.valid_mel_loss.reset()
+
+        valid_pesq_wb_epoch = self.valid_pesq_wb.compute()
+        self.log("valid/pesq_wb", valid_pesq_wb_epoch.item(), sync_dist=True)
+        self.valid_pesq_wb.reset()
+
+        valid_pesq_nb_epoch = self.valid_pesq_nb.compute()
+        self.log("valid/pesq_nb", valid_pesq_nb_epoch.item(), sync_dist=True)
+        self.valid_pesq_nb.reset()
+
+        valid_stoi_epoch = self.valid_stoi.compute()
+        self.log("valid/stoi", valid_stoi_epoch.item(), sync_dist=True)
+        self.valid_stoi.reset()
 
     def configure_optimizers(self):
         self.optim_g = torch.optim.AdamW(

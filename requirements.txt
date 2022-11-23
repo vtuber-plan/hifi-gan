@@ -7,3 +7,6 @@ pytorch-lightning==1.8.2
 
 fairseq==0.12.2
 tensorboardX==2.5.1
+
+pesq==0.0.4
+pystoi==0.3.3
