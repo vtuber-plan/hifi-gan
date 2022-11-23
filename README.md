@@ -61,6 +61,12 @@ torchaudio.save("test_out.wav", wav_out, sr)
 |  Name            | Dataset   | Fine-tuned |
 |  ----            | ----      |   ----     |
 |  Hifi-GAN-48k    | Universal |     No     |
+|  Hifi-GAN-44.1k  | Universal |     No     |
+|  Hifi-GAN-36k    | Universal |     No     |
+|  Hifi-GAN-24k    | Universal |     No     |
+|  Hifi-GAN-16k    | Universal |     No     |
+
+Training Datasets: VCTK, JSUT and RAVDESS
 
 # Train Vocoder
 Place all audio files under the dataset folder.
