@@ -7,7 +7,7 @@ import soundfile as sf
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', type=str, default="./dataset", help='Dataset path')
-    parser.add_argument('-o', '--output', type=str, default="./filelists/example_audio_filelist.txt", help='File list output path')
+    parser.add_argument('-o', '--output', type=str, default="./filelists/48k_audio_filelist.txt", help='File list output path')
     parser.add_argument('-s', '--sr', type=int, default=48000, help='File target sample rate')
     args = parser.parse_args()
 

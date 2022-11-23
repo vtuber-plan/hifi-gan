@@ -76,9 +76,5 @@ out = hifigan(mel)
 
 wav_out = out.squeeze(0).cpu()
 
-torchaudio.save("test_out2.wav", wav_out, sr)
+torchaudio.save("test_out.wav", wav_out, sr)
 
-# import librosa
-# import scipy
-# audio = librosa.feature.inverse.mel_to_audio(mel.detach().cpu().numpy(), sr=sr, n_fft=2048, hop_length=512, win_length=2048)
-# torchaudio.save("test_out2.wav", torch.tensor(audio), sr)
