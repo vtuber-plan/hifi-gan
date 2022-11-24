@@ -13,8 +13,8 @@ import random
 
 import pytorch_lightning as pl
 import torchmetrics
-from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
-from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
+# from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
+# from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 
 from .discriminators.multi_scale_discriminator import MultiScaleDiscriminator
 from .discriminators.multi_period_discriminator import MultiPeriodDiscriminator

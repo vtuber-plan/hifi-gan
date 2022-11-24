@@ -14,8 +14,12 @@ class MultiScaleDiscriminator(torch.nn.Module):
             DiscriminatorS(use_spectral_norm=use_spectral_norm),
             DiscriminatorS(),
             DiscriminatorS(),
+            DiscriminatorS(),
+            DiscriminatorS(),
         ])
         self.meanpools = nn.ModuleList([
+            AvgPool1d(kernel_size=4, stride=2, padding=2),
+            AvgPool1d(kernel_size=4, stride=2, padding=2),
             AvgPool1d(kernel_size=4, stride=2, padding=2),
             AvgPool1d(kernel_size=4, stride=2, padding=2)
         ])

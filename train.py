@@ -58,7 +58,7 @@ def main():
         dirpath=None, save_last=True, every_n_train_steps=2000, save_weights_only=False,
         monitor="valid/loss_mel_epoch", mode="min", save_top_k=3
     )
-    earlystop_callback = EarlyStopping(monitor="valid/loss_mel_epoch", mode="min", patience=3)
+    earlystop_callback = EarlyStopping(monitor="valid/loss_mel_epoch", mode="min", patience=7)
 
     trainer_params = {
         "accelerator": args.accelerator,

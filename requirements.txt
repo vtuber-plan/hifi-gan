@@ -4,6 +4,7 @@ matplotlib==3.5.3
 numpy==1.23.5
 scipy==1.9.1
 pytorch-lightning==1.8.2
+torchmetrics==0.10.2
 
 fairseq==0.12.2
 tensorboardX==2.5.1
