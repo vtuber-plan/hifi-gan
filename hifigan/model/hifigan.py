@@ -13,17 +13,19 @@ import random
 
 import pytorch_lightning as pl
 import torchmetrics
+
 # from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
 # from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 
 from .discriminators.multi_scale_discriminator import MultiScaleDiscriminator
 from .discriminators.multi_period_discriminator import MultiPeriodDiscriminator
+from .discriminators.spectrogram_discriminator import SpectrogramDiscriminator
 from .generators.generator import Generator
 
 from ..mel_processing import spec_to_mel_torch, mel_spectrogram_torch, spectrogram_torch, spectrogram_torch_audio
 from .losses import discriminator_loss, kl_loss,feature_loss, generator_loss
 from .. import utils
-from .commons import slice_segments, rand_slice_segments, sequence_mask
+from .commons import slice_segments, rand_slice_segments, sequence_mask, clip_grad_value_
 from .pipeline import AudioPipeline
 
 class HifiGAN(pl.LightningModule):
@@ -45,6 +47,11 @@ class HifiGAN(pl.LightningModule):
             use_spectral_norm=self.hparams.model.use_spectral_norm
         )
         self.net_scale_d = MultiScaleDiscriminator(use_spectral_norm=self.hparams.model.use_spectral_norm)
+        self.net_spec_d = SpectrogramDiscriminator(
+            n_fft=self.hparams.data.filter_length,
+            win_length=self.hparams.data.win_length,
+            hop_length=self.hparams.data.hop_length,
+            use_spectral_norm=self.hparams.model.use_spectral_norm)
 
         self.audio_pipeline = AudioPipeline(freq=self.hparams.data.sampling_rate,
                                             n_fft=self.hparams.data.filter_length,
@@ -100,7 +107,12 @@ class HifiGAN(pl.LightningModule):
             y_ds_hat_r, y_ds_hat_g, _, _ = self.net_scale_d(y_wav, y_hat.detach())
             loss_disc_s, losses_disc_s_r, losses_disc_s_g = discriminator_loss(y_ds_hat_r, y_ds_hat_g)
 
-            loss_disc_all = loss_disc_p + loss_disc_s
+            # SPD
+            y_de_hat_r, y_de_hat_g, _, _ = self.net_spec_d(y_wav, y_hat.detach())
+            loss_disc_e, losses_disc_e_r, losses_disc_e_g = discriminator_loss(y_de_hat_r, y_de_hat_g)
+
+
+            loss_disc_all = loss_disc_p + loss_disc_s + loss_disc_e
 
             # log
             lr = self.optim_g.param_groups[0]['lr']
@@ -109,6 +121,8 @@ class HifiGAN(pl.LightningModule):
             scalar_dict.update({"train/d_p_g/{}".format(i): v for i, v in enumerate(losses_disc_p_g)})
             scalar_dict.update({"train/d_s_r/{}".format(i): v for i, v in enumerate(losses_disc_s_r)})
             scalar_dict.update({"train/d_s_g/{}".format(i): v for i, v in enumerate(losses_disc_s_g)})
+            scalar_dict.update({"train/d_e_r/{}".format(i): v for i, v in enumerate(losses_disc_e_r)})
+            scalar_dict.update({"train/d_e_g/{}".format(i): v for i, v in enumerate(losses_disc_e_g)})
 
             image_dict = {}
             
@@ -119,7 +133,7 @@ class HifiGAN(pl.LightningModule):
                 global_step=self.global_step, 
                 images=image_dict,
                 scalars=scalar_dict)
-
+            
             return loss_disc_all
 
         # Generator
@@ -131,6 +145,10 @@ class HifiGAN(pl.LightningModule):
             y_ds_hat_r, y_ds_hat_g, fmap_s_r, fmap_s_g = self.net_scale_d(y_wav, y_hat)
             loss_s_fm = feature_loss(fmap_s_r, fmap_s_g)
             loss_s_gen, losses_s_gen = generator_loss(y_ds_hat_g)
+
+            y_de_hat_r, y_de_hat_g, fmap_e_r, fmap_e_g = self.net_spec_d(y_wav, y_hat)
+            loss_e_fm = feature_loss(fmap_e_r, fmap_e_g)
+            loss_e_gen, losses_e_gen = generator_loss(y_de_hat_g)
 
             y_mel = mel_spectrogram_torch(
                 y_wav.squeeze(1).float(),
@@ -146,7 +164,7 @@ class HifiGAN(pl.LightningModule):
             # mel
             loss_mel = F.l1_loss(y_mel_hat, y_mel) * self.hparams.train.c_mel
 
-            loss_gen_all = (loss_s_gen + loss_s_fm) + (loss_p_gen + loss_p_fm) + loss_mel
+            loss_gen_all = (loss_s_gen + loss_s_fm) + (loss_p_gen + loss_p_fm) + (loss_e_gen + loss_e_fm) + loss_mel
 
             # Logging to TensorBoard by default
             lr = self.optim_g.param_groups[0]['lr']
@@ -154,8 +172,10 @@ class HifiGAN(pl.LightningModule):
             scalar_dict.update({
                 "train/g/p_fm": loss_p_fm,
                 "train/g/s_fm": loss_s_fm,
+                "train/g/e_fm": loss_e_fm,
                 "train/g/p_gen": loss_p_gen,
                 "train/g/s_gen": loss_s_gen,
+                "train/g/e_gen": loss_e_gen,
                 "train/g/loss_mel": loss_mel,
             })
 
@@ -290,14 +310,14 @@ class HifiGAN(pl.LightningModule):
 
     def configure_optimizers(self):
         self.optim_g = torch.optim.AdamW(
-            self.net_g.parameters(), 
-            self.hparams.train.learning_rate, 
-            betas=self.hparams.train.betas, 
+            self.net_g.parameters(),
+            self.hparams.train.generator_learning_rate,
+            betas=self.hparams.train.betas,
             eps=self.hparams.train.eps)
         self.optim_d = torch.optim.AdamW(
             itertools.chain(self.net_period_d.parameters(), self.net_scale_d.parameters()),
-            self.hparams.train.learning_rate, 
-            betas=self.hparams.train.betas, 
+            self.hparams.train.discriminator_learning_rate,
+            betas=self.hparams.train.betas,
             eps=self.hparams.train.eps)
         self.scheduler_g = torch.optim.lr_scheduler.ExponentialLR(self.optim_g, gamma=self.hparams.train.lr_decay)
         self.scheduler_g.last_epoch = self.current_epoch - 1

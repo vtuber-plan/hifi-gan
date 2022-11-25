@@ -43,8 +43,8 @@ def load_local():
     from hifigan.model.hifigan import HifiGAN
 
     ckpt_path = None
-    if os.path.exists("logs/lightning_logs"):
-        versions = glob.glob("logs/lightning_logs/version_*")
+    if os.path.exists("logs_48k/lightning_logs"):
+        versions = glob.glob("logs_48k/lightning_logs/version_*")
         if len(list(versions)) > 0:
             last_ver = sorted(list(versions), key=lambda p: int(p.split("_")[-1]))[-1]
             last_ckpt = os.path.join(last_ver, "checkpoints/last.ckpt")
@@ -58,19 +58,22 @@ def load_local():
     return model.net_g
 
 def load_remote():
-    return torch.hub.load("vtuber-plan/hifi-gan:v0.3.1", "hifigan_48k", force_reload=True)
+    return torch.hub.load("vtuber-plan/hifi-gan:v0.3.1", "hifigan_48k", force_reload=False)
 
 device = "cpu"
 
 # Load Remote checkpoint
-hifigan = load_remote().to(device)
+# hifigan = load_remote().to(device)
 
 # Load Local checkpoint
-# hifigan = load_local().to(device)
+hifigan = load_local().to(device)
 
 # Load audio
-wav, sr = torchaudio.load("zszy_48k.wav")
-assert sr == 48000
+wav, sr = torchaudio.load("dataset/103 Chinese Mandarin Songs in Acapella - Female/000102_01.wav")
+if sr != 48000:
+    wav = torchaudio.functional.resample(waveform=wav, orig_freq=sr, new_freq=48000)
+
+# assert sr == 48000
 
 # mel = mel_spectrogram_torch(wav, 2048, 128, 48000, 512, 2048, 0, None, False)
 audio_pipeline = AudioPipeline(freq=48000,
@@ -83,5 +86,5 @@ out = hifigan(mel)
 
 wav_out = out.squeeze(0).cpu()
 
-torchaudio.save("test_out.wav", wav_out, sr)
+torchaudio.save("test_out.wav", wav_out, 48000)
 

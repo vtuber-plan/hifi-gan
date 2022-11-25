@@ -77,6 +77,14 @@ python split.py
 python train.py
 ```
 
+## Single GPU Training
+
+## Single Node Multi GPUs Training
+
+## Multi Node Multi GPUs Training
+
+## TPU Training
+
 # LICENSE
 ```
 MIT License

@@ -82,7 +82,7 @@ def main():
     # data
     train_dataset = MelDataset(hparams.data.training_files, hparams.data)
     valid_dataset = MelDataset(hparams.data.validation_files, hparams.data)
-        
+
     collate_fn = MelCollate()
 
     if "strategy" in trainer_params and trainer_params["strategy"] == "ddp":
