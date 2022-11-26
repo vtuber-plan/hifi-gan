@@ -3,7 +3,7 @@
       "max_epochs": 20000,
       "accumulate_grad_batches": 1,
       "default_root_dir": "./logs_48k",
-      "val_check_interval": 2000,
+      "val_check_interval": 1.0,
       "gradient_clip_val": 0.5
     },
     "train": {
@@ -12,7 +12,7 @@
       "seed": 1234,
       "max_epochs": 20000,
       "generator_learning_rate": 0.0002,
-      "discriminator_learning_rate": 0.00008,
+      "discriminator_learning_rate": 0.0001,
       "betas": [0.8, 0.99],
       "eps": 1e-9,
       "batch_size": 32,
@@ -47,6 +47,6 @@
       "upsample_initial_channel": 512,
       "upsample_kernel_sizes": [16,16,4,4,4],
       "use_spectral_norm": false,
-      "multi_period_discriminator_periods": [3, 5, 7, 11, 17, 23, 37]
+      "multi_period_discriminator_periods": [2, 3, 5, 7, 11, 13, 17, 19, 23, 37]
     }
   }
