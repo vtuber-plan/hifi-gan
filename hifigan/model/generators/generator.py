@@ -43,11 +43,15 @@ class ResBlock(torch.nn.Module):
             x = x * x_mask
         return x
 
-    def remove_weight_norm(self):
-        for l in self.convs1:
-            remove_weight_norm(l)
-        for l in self.convs2:
-            remove_weight_norm(l)
+class ResizeConv1d(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride):
+        super(ResizeConv1d, self).__init__()
+        self.stride = stride
+        self.conv = Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=1, padding='same')
+
+    def forward(self, x):
+        interpolated_x = torch.nn.functional.interpolate(x, size=(self.stride * x.shape[2],), mode='linear', align_corners=True)
+        return self.conv(interpolated_x)
 
 class Generator(torch.nn.Module):
     def __init__(self, initial_channel: int,
@@ -63,14 +67,17 @@ class Generator(torch.nn.Module):
 
         self.ups = nn.ModuleList()
         for i, (u, k) in enumerate(zip(upsample_rates, upsample_kernel_sizes)):
-            self.ups.append(weight_norm(
-                ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
-                                out_channels=upsample_initial_channel//(2**(i+1)),
-                                kernel_size=k,
-                                stride=u,
-                                padding=(k-u)//2)
-                )
+            self.ups.append(
+                ResizeConv1d(in_channels=upsample_initial_channel//(2**i),
+                            out_channels=upsample_initial_channel//(2**(i+1)),
+                            kernel_size=k,
+                            stride=u)
             )
+            # ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
+            #                 out_channels=upsample_initial_channel//(2**(i+1)),
+            #                 kernel_size=k,
+            #                 stride=u,
+            #                 padding=(k-u)//2)
 
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
@@ -79,7 +86,7 @@ class Generator(torch.nn.Module):
                 self.resblocks.append(ResBlock(channels=ch, kernel_size=k, dilation=d))
 
         self.conv_post = Conv1d(ch, 1, 7, 1, padding=3, bias=False)
-        self.ups.apply(init_weights)
+        # self.ups.apply(init_weights)
         self.conv_post.apply(init_weights)
 
     def forward(self, x):

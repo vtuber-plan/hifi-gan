@@ -43,7 +43,7 @@ def last_checkpoint(path: str) -> Optional[str]:
     return ckpt_path
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', type=str, default="./configs/48k_trans.json", help='JSON file for configuration')
+    parser.add_argument('-c', '--config', type=str, default="./configs/48k.json", help='JSON file for configuration')
     parser.add_argument('-a', '--accelerator', type=str, default="gpu", help='training device')
     parser.add_argument('-d', '--device', type=str, default="6", help='training device ids')
     parser.add_argument('-n', '--num-nodes', type=int, default=1, help='training node number')
