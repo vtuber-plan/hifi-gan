@@ -43,8 +43,8 @@ def load_local():
     from hifigan.model.hifigan import HifiGAN
 
     ckpt_path = None
-    if os.path.exists("logs_48k/lightning_logs"):
-        versions = glob.glob("logs_48k/lightning_logs/version_*")
+    if os.path.exists("logs_48k_trans/lightning_logs"):
+        versions = glob.glob("logs_48k_trans/lightning_logs/version_*")
         if len(list(versions)) > 0:
             last_ver = sorted(list(versions), key=lambda p: int(p.split("_")[-1]))[-1]
             last_ckpt = os.path.join(last_ver, "checkpoints/last.ckpt")
