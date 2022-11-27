@@ -36,7 +36,6 @@
     },
     "model": {
       "inter_channels": 128,
-      "resblock": "1",
       "resblock_kernel_sizes": [3,7,11,13],
       "resblock_dilation_sizes": [
         [1,2,3,5],
@@ -44,9 +43,9 @@
         [1,2,3,5],
         [1,2,3,5]
       ],
-      "upsample_rates": [8,8,2,2,2],
+      "upsample_rates": [4,2,4,2,2,2,2],
       "upsample_initial_channel": 512,
-      "upsample_kernel_sizes": [16,16,4,4,4],
+      "upsample_kernel_sizes": [8,4,8,4,4,4,4],
       "use_spectral_norm": false,
       "multi_period_discriminator_periods": [2, 3, 5, 7, 11, 13, 17, 19, 23, 37]
     }
