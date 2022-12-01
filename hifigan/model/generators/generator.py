@@ -59,25 +59,23 @@ class Generator(torch.nn.Module):
                     resblock_dilation_sizes: List[int],
                     upsample_rates: List[int],
                     upsample_initial_channel: int,
-                    upsample_kernel_sizes: List[int]):
+                    upsample_kernel_sizes: List[int],
+                    pre_kernel_size: int=11,
+                    post_kernel_size: int=11):
         super(Generator, self).__init__()
         self.num_kernels = len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_rates)
-        self.conv_pre = Conv1d(in_channels=initial_channel, out_channels=upsample_initial_channel, kernel_size=7, stride=1, padding=3)
+        self.conv_pre = Conv1d(in_channels=initial_channel, out_channels=upsample_initial_channel, kernel_size=pre_kernel_size, stride=1, padding=(pre_kernel_size-1)//2)
 
         self.ups = nn.ModuleList()
         for i, (u, k) in enumerate(zip(upsample_rates, upsample_kernel_sizes)):
             self.ups.append(
-                ResizeConv1d(in_channels=upsample_initial_channel//(2**i),
+                ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
                             out_channels=upsample_initial_channel//(2**(i+1)),
                             kernel_size=k,
-                            stride=u)
+                            stride=u,
+                            padding=(k-u)//2)
             )
-            # ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
-            #                 out_channels=upsample_initial_channel//(2**(i+1)),
-            #                 kernel_size=k,
-            #                 stride=u,
-            #                 padding=(k-u)//2)
 
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
@@ -85,8 +83,8 @@ class Generator(torch.nn.Module):
             for j, (k, d) in enumerate(zip(resblock_kernel_sizes, resblock_dilation_sizes)):
                 self.resblocks.append(ResBlock(channels=ch, kernel_size=k, dilation=d))
 
-        self.conv_post = Conv1d(ch, 1, 7, 1, padding=3, bias=False)
-        # self.ups.apply(init_weights)
+        self.conv_post = Conv1d(ch, 1, post_kernel_size, 1, padding=(post_kernel_size-1)//2, bias=False)
+        self.ups.apply(init_weights)
         self.conv_post.apply(init_weights)
 
     def forward(self, x):

@@ -39,7 +39,9 @@ class HifiGAN(pl.LightningModule):
             self.hparams.model.resblock_dilation_sizes,
             self.hparams.model.upsample_rates,
             self.hparams.model.upsample_initial_channel,
-            self.hparams.model.upsample_kernel_sizes
+            self.hparams.model.upsample_kernel_sizes,
+            # self.hparams.model.pre_kernel_size,
+            # self.hparams.model.post_kernel_size
         )
         self.net_period_d = MultiPeriodDiscriminator(
             periods=self.hparams.model.multi_period_discriminator_periods,
