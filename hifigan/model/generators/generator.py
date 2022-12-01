@@ -78,8 +78,8 @@ class Generator(torch.nn.Module):
             )
 
         self.resblocks = nn.ModuleList()
-        for i in range(len(self.ups)):
-            ch = upsample_initial_channel//(2**(i+1))
+        for i in range(len(self.ups) + 1):
+            ch = upsample_initial_channel//(2**i)
             for j, (k, d) in enumerate(zip(resblock_kernel_sizes, resblock_dilation_sizes)):
                 self.resblocks.append(ResBlock(channels=ch, kernel_size=k, dilation=d))
 
@@ -90,13 +90,17 @@ class Generator(torch.nn.Module):
     def forward(self, x):
         x = self.conv_pre(x)
 
-        for i in range(self.num_upsamples):
-            x = F.leaky_relu(x, LRELU_SLOPE)
-            x = self.ups[i](x)
-            xs = []
+        for i in range(self.num_upsamples + 1):
+            if i != 0:
+                x = F.leaky_relu(x, LRELU_SLOPE)
+                x = self.ups[i-1](x)
+            xs = None
             for j in range(self.num_kernels):
-                xs.append(self.resblocks[i * self.num_kernels + j](x))
-            x = reduce(operator.add, xs) / self.num_kernels
+                if xs is None:
+                    xs = self.resblocks[i * self.num_kernels + j](x)
+                else:
+                    xs += self.resblocks[i * self.num_kernels + j](x)
+            x = xs / self.num_kernels
         x = F.leaky_relu(x)
         x = self.conv_post(x)
         x = torch.tanh(x)
