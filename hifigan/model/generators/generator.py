@@ -18,13 +18,13 @@ class ResBlock(torch.nn.Module):
         super(ResBlock, self).__init__()
         self.convs1 = nn.ModuleList()
         for dilation_size in dilation:
-            conv_kernel = Conv1d(channels, channels, kernel_size, 1, dilation=dilation_size, padding=get_padding(kernel_size, dilation_size))
+            conv_kernel = weight_norm(Conv1d(channels, channels, kernel_size, 1, dilation=dilation_size, padding=get_padding(kernel_size, dilation_size)))
             self.convs1.append(conv_kernel)
         self.convs1.apply(init_weights)
 
         self.convs2 = nn.ModuleList()
         for dilation_size in dilation:
-            conv_kernel = Conv1d(channels, channels, kernel_size, 1, dilation=1, padding=get_padding(kernel_size, 1))
+            conv_kernel = weight_norm(Conv1d(channels, channels, kernel_size, 1, dilation=1, padding=get_padding(kernel_size, 1)))
             self.convs2.append(conv_kernel)
         self.convs2.apply(init_weights)
 
@@ -42,6 +42,12 @@ class ResBlock(torch.nn.Module):
         if x_mask is not None:
             x = x * x_mask
         return x
+
+    def remove_weight_norm(self):
+        for l in self.convs1:
+            remove_weight_norm(l)
+        for l in self.convs2:
+            remove_weight_norm(l)
 
 class ResizeConv1d(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride):
