@@ -71,7 +71,12 @@ class Generator(torch.nn.Module):
         super(Generator, self).__init__()
         self.num_kernels = len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_rates)
+        self.n_head = 4
+
         self.conv_pre = Conv1d(in_channels=initial_channel, out_channels=upsample_initial_channel, kernel_size=pre_kernel_size, stride=1, padding=(pre_kernel_size-1)//2)
+
+        self.transformer_pre_encoder_layer = nn.TransformerEncoderLayer(d_model=upsample_initial_channel, nhead=self.n_head, batch_first=True, activation="gelu")
+        self.transformer_pre_encoder = nn.TransformerEncoder(self.transformer_pre_encoder_layer, num_layers=2)
 
         self.ups = nn.ModuleList()
         for i, (u, k) in enumerate(zip(upsample_rates, upsample_kernel_sizes)):
@@ -84,8 +89,8 @@ class Generator(torch.nn.Module):
             )
 
         self.resblocks = nn.ModuleList()
-        for i in range(len(self.ups) + 1):
-            ch = upsample_initial_channel//(2**i)
+        for i in range(len(self.ups)):
+            ch = upsample_initial_channel//(2**(i+1))
             for j, (k, d) in enumerate(zip(resblock_kernel_sizes, resblock_dilation_sizes)):
                 self.resblocks.append(ResBlock(channels=ch, kernel_size=k, dilation=d))
 
@@ -95,11 +100,11 @@ class Generator(torch.nn.Module):
 
     def forward(self, x):
         x = self.conv_pre(x)
-
-        for i in range(self.num_upsamples + 1):
-            if i != 0:
-                x = F.leaky_relu(x, LRELU_SLOPE)
-                x = self.ups[i-1](x)
+        x = self.transformer_pre_encoder(x.transpose(1,2)).transpose(1,2)
+        
+        for i in range(self.num_upsamples):
+            x = F.leaky_relu(x, LRELU_SLOPE)
+            x = self.ups[i](x)
             xs = None
             for j in range(self.num_kernels):
                 if xs is None:

@@ -241,8 +241,8 @@ class HifiGAN(pl.LightningModule):
             "gt/mel": utils.plot_spectrogram_to_numpy(y_mel[0].cpu().numpy())
         }
         audio_dict = {
-            "gen/audio": y_wav_hat[0,:,:y_hat_lengths[0]],
-            "gt/audio": y_wav[0,:,:y_wav_lengths[0]]
+            "gen/audio": y_wav_hat[0,:,:y_hat_lengths[0]].squeeze(0).float(),
+            "gt/audio": y_wav[0,:,:y_wav_lengths[0]].squeeze(0).float()
         }
 
         mel_mask = torch.unsqueeze(sequence_mask(x_mel_lengths.long(), y_mel.size(2)), 1).to(y_mel.dtype)

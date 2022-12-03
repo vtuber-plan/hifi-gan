@@ -94,6 +94,10 @@ def main():
 
     # model
     model = HifiGAN(**hparams)
+    # model.net_g = torch.compile(model.net_g)
+    # model.net_period_d = torch.compile(model.net_period_d)
+    # model.net_scale_d = torch.compile(model.net_scale_d)
+
     # model = HifiGAN.load_from_checkpoint(checkpoint_path="logs/lightning_logs_v1/version_8/checkpoints/last.ckpt", strict=True)
     # model.net_g._load_from_state_dict(torch.load("net_g.pt"), strict=False)
     # model.net_period_d._load_from_state_dict(torch.load("net_period_d.pt"), strict=False)
