@@ -49,30 +49,30 @@ class ResBlock(torch.nn.Module):
         for l in self.convs2:
             remove_weight_norm(l)
 
-class ResizeConv1d(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride):
-        super(ResizeConv1d, self).__init__()
-        self.stride = stride
-        self.conv = Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=1, padding='same')
-        self.conv.apply(init_weights)
+class ConvTranspose1dBlock(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, dilation: List[int] = [1, 3, 5, 7]):
+        super(ConvTranspose1dBlock, self).__init__()
+        self.convs = nn.ModuleList()
+        for dilation_size in dilation:
+            conv_kernel = ConvTranspose1d(in_channels, out_channels, kernel_size, stride, dilation=dilation_size, padding=self.get_padding(kernel_size, dilation_size, stride))
+            self.convs.append(conv_kernel)
+        self.convs.apply(init_weights)
 
-        self.weight = self.conv.weight
-        
-    def forward(self, x):
-        interpolated_x = torch.nn.functional.interpolate(x, size=(self.stride * x.shape[2],), mode='linear', align_corners=True)
-        return self.conv(interpolated_x)
+    def forward(self, x, x_mask=None):
+        for c in self.convs:
+            xt = F.leaky_relu(x, LRELU_SLOPE)
+            if x_mask is not None:
+                xt = xt * x_mask
+            xt = c(xt)
+            x = xt + x
+        if x_mask is not None:
+            x = x * x_mask
+        return x
+    
+    def get_padding(self, kernel: int, dilation: int, stride: int):
+        fake_kernel = (kernel-1)*dilation+1
+        return (fake_kernel-stride)//2
 
-class ResizeConv1dBlock(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride):
-        super(ResizeConv1dBlock, self).__init__()
-        self.conv = weight_norm(ResizeConv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride))
-        self.weight = self.conv.weight
-    def forward(self, x):
-        return self.conv(x)
-
-    def remove_weight_norm(self):
-        for l in self.conv:
-            remove_weight_norm(l)
 
 class Generator(torch.nn.Module):
     def __init__(self, initial_channel: int,
