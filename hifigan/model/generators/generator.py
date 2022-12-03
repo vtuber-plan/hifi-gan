@@ -54,10 +54,25 @@ class ResizeConv1d(torch.nn.Module):
         super(ResizeConv1d, self).__init__()
         self.stride = stride
         self.conv = Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=1, padding='same')
+        self.conv.apply(init_weights)
 
+        self.weight = self.conv.weight
+        
     def forward(self, x):
         interpolated_x = torch.nn.functional.interpolate(x, size=(self.stride * x.shape[2],), mode='linear', align_corners=True)
         return self.conv(interpolated_x)
+
+class ResizeConv1dBlock(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride):
+        super(ResizeConv1dBlock, self).__init__()
+        self.conv = weight_norm(ResizeConv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride))
+        self.weight = self.conv.weight
+    def forward(self, x):
+        return self.conv(x)
+
+    def remove_weight_norm(self):
+        for l in self.conv:
+            remove_weight_norm(l)
 
 class Generator(torch.nn.Module):
     def __init__(self, initial_channel: int,
@@ -66,6 +81,7 @@ class Generator(torch.nn.Module):
                     upsample_rates: List[int],
                     upsample_initial_channel: int,
                     upsample_kernel_sizes: List[int],
+                    upsample_dilation_sizes: List[int],
                     pre_kernel_size: int=11,
                     post_kernel_size: int=11):
         super(Generator, self).__init__()
@@ -75,17 +91,18 @@ class Generator(torch.nn.Module):
 
         self.conv_pre = Conv1d(in_channels=initial_channel, out_channels=upsample_initial_channel, kernel_size=pre_kernel_size, stride=1, padding=(pre_kernel_size-1)//2)
 
-        self.transformer_pre_encoder_layer = nn.TransformerEncoderLayer(d_model=upsample_initial_channel, nhead=self.n_head, batch_first=True, activation="gelu")
-        self.transformer_pre_encoder = nn.TransformerEncoder(self.transformer_pre_encoder_layer, num_layers=2)
+        # self.transformer_pre_encoder_layer = nn.TransformerEncoderLayer(d_model=upsample_initial_channel, nhead=self.n_head, batch_first=True, activation="gelu")
+        # self.transformer_pre_encoder = nn.TransformerEncoder(self.transformer_pre_encoder_layer, num_layers=2)
 
         self.ups = nn.ModuleList()
-        for i, (u, k) in enumerate(zip(upsample_rates, upsample_kernel_sizes)):
+        for i, (u, k, d) in enumerate(zip(upsample_rates, upsample_kernel_sizes, upsample_dilation_sizes)):
             self.ups.append(
                 ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
-                            out_channels=upsample_initial_channel//(2**(i+1)),
-                            kernel_size=k,
-                            stride=u,
-                            padding=(k-u)//2)
+                    out_channels=upsample_initial_channel//(2**(i+1)),
+                    kernel_size=k,
+                    stride=u,
+                    padding=(((k-1)*d+1)-u)//2,
+                    dilation=d)
             )
 
         self.resblocks = nn.ModuleList()
@@ -100,7 +117,7 @@ class Generator(torch.nn.Module):
 
     def forward(self, x):
         x = self.conv_pre(x)
-        x = self.transformer_pre_encoder(x.transpose(1,2)).transpose(1,2)
+        # x = self.transformer_pre_encoder(x.transpose(1,2)).transpose(1,2)
         
         for i in range(self.num_upsamples):
             x = F.leaky_relu(x, LRELU_SLOPE)
