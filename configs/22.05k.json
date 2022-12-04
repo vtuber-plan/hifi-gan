@@ -2,7 +2,7 @@
     "trainer": {
       "max_epochs": 20000,
       "accumulate_grad_batches": 1,
-      "default_root_dir": "./logs_24k",
+      "default_root_dir": "./logs_22.05k",
       "val_check_interval": 1.0
     },
     "train": {
@@ -22,8 +22,8 @@
       "c_mel": 45
     },
     "data": {
-      "training_files": "filelists/24k_audio_filelist_train.txt",
-      "validation_files": "filelists/24k_audio_filelist_valid.txt",
+      "training_files": "filelists/22.05k_audio_filelist_train.txt",
+      "validation_files": "filelists/22.05k_audio_filelist_valid.txt",
       "sampling_rate": 24000,
       "filter_length": 2048,
       "hop_length": 512,

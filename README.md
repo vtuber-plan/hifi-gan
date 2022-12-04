@@ -64,6 +64,7 @@ torchaudio.save("test_out.wav", wav_out, sr)
 |  Hifi-GAN-44.1k  | Universal |     No     |
 |  Hifi-GAN-36k    | Universal |     No     |
 |  Hifi-GAN-24k    | Universal |     No     |
+|  Hifi-GAN-22.05k | Universal |     No     |
 |  Hifi-GAN-16k    | Universal |     No     |
 
 Training Datasets: VCTK, JSUT and RAVDESS

@@ -56,18 +56,23 @@ class ConvTranspose1dBlock(torch.nn.Module):
         for dilation_size in dilation:
             conv_kernel = ConvTranspose1d(in_channels, out_channels, kernel_size, stride, dilation=dilation_size, padding=self.get_padding(kernel_size, dilation_size, stride))
             self.convs.append(conv_kernel)
-        self.convs.apply(init_weights)
+            conv_kernel.apply(init_weights)
 
     def forward(self, x, x_mask=None):
+        out = None
         for c in self.convs:
             xt = F.leaky_relu(x, LRELU_SLOPE)
             if x_mask is not None:
                 xt = xt * x_mask
             xt = c(xt)
-            x = xt + x
+            if out is None:
+                out = xt
+            else:
+                out += xt
+        out = out / len(self.convs)
         if x_mask is not None:
-            x = x * x_mask
-        return x
+            out = out * x_mask
+        return out
     
     def get_padding(self, kernel: int, dilation: int, stride: int):
         fake_kernel = (kernel-1)*dilation+1
@@ -97,13 +102,22 @@ class Generator(torch.nn.Module):
         self.ups = nn.ModuleList()
         for i, (u, k, d) in enumerate(zip(upsample_rates, upsample_kernel_sizes, upsample_dilation_sizes)):
             self.ups.append(
-                ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
+                ConvTranspose1dBlock(
+                    in_channels=upsample_initial_channel//(2**i),
+                    out_channels=upsample_initial_channel//(2**(i+1)),
+                    kernel_size=k,
+                    stride=u,
+                    dilation=[1,3,5,7]
+                )
+            )
+        '''
+        ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
                     out_channels=upsample_initial_channel//(2**(i+1)),
                     kernel_size=k,
                     stride=u,
                     padding=(((k-1)*d+1)-u)//2,
                     dilation=d)
-            )
+        '''
 
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
@@ -112,7 +126,7 @@ class Generator(torch.nn.Module):
                 self.resblocks.append(ResBlock(channels=ch, kernel_size=k, dilation=d))
 
         self.conv_post = Conv1d(ch, 1, post_kernel_size, 1, padding=(post_kernel_size-1)//2, bias=False)
-        self.ups.apply(init_weights)
+        # self.ups.apply(init_weights)
         self.conv_post.apply(init_weights)
 
     def forward(self, x):
@@ -121,13 +135,13 @@ class Generator(torch.nn.Module):
         
         for i in range(self.num_upsamples):
             x = F.leaky_relu(x, LRELU_SLOPE)
-            x = self.ups[i](x)
+            up_x = self.ups[i](x)
             xs = None
             for j in range(self.num_kernels):
                 if xs is None:
-                    xs = self.resblocks[i * self.num_kernels + j](x)
+                    xs = self.resblocks[i * self.num_kernels + j](up_x)
                 else:
-                    xs += self.resblocks[i * self.num_kernels + j](x)
+                    xs += self.resblocks[i * self.num_kernels + j](up_x)
             x = xs / self.num_kernels
         x = F.leaky_relu(x)
         x = self.conv_post(x)

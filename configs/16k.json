@@ -44,6 +44,6 @@
     "upsample_initial_channel": 512,
     "upsample_kernel_sizes": [16,16,4,4,4],
     "use_spectral_norm": false,
-    "multi_period_discriminator_periods": [2, 3, 5, 7, 11, 17, 23, 37]
+    "multi_period_discriminator_periods": [2, 3, 5, 7, 11]
   }
 }
