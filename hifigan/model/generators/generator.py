@@ -49,27 +49,28 @@ class ResBlock(torch.nn.Module):
         for l in self.convs2:
             remove_weight_norm(l)
 
-class ConvTranspose1dBlock(torch.nn.Module):
+class MultiHeadConvTranspose1dBlock(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride, dilation: List[int] = [1, 3, 5, 7]):
-        super(ConvTranspose1dBlock, self).__init__()
+        super(MultiHeadConvTranspose1dBlock, self).__init__()
+        self.dilation = dilation
         self.convs = nn.ModuleList()
+        self.num_head = len(dilation)
         for dilation_size in dilation:
             conv_kernel = ConvTranspose1d(in_channels, out_channels, kernel_size, stride, dilation=dilation_size, padding=self.get_padding(kernel_size, dilation_size, stride))
             self.convs.append(conv_kernel)
             conv_kernel.apply(init_weights)
+        self.out_linear = nn.Linear(self.num_head * out_channels, out_channels, bias=True)
 
     def forward(self, x, x_mask=None):
-        out = None
+        concat_out = []
         for c in self.convs:
             xt = F.leaky_relu(x, LRELU_SLOPE)
             if x_mask is not None:
                 xt = xt * x_mask
             xt = c(xt)
-            if out is None:
-                out = xt
-            else:
-                out += xt
-        out = out / len(self.convs)
+            concat_out.append(xt)
+        xout = torch.concat(concat_out, dim=1)
+        out = self.out_linear(xout.transpose(1,2)).transpose(1,2)
         if x_mask is not None:
             out = out * x_mask
         return out
@@ -102,7 +103,7 @@ class Generator(torch.nn.Module):
         self.ups = nn.ModuleList()
         for i, (u, k, d) in enumerate(zip(upsample_rates, upsample_kernel_sizes, upsample_dilation_sizes)):
             self.ups.append(
-                ConvTranspose1dBlock(
+                MultiHeadConvTranspose1dBlock(
                     in_channels=upsample_initial_channel//(2**i),
                     out_channels=upsample_initial_channel//(2**(i+1)),
                     kernel_size=k,

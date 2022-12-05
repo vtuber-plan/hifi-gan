@@ -50,7 +50,7 @@ class AudioPipeline(torch.nn.Module):
 
         # self.strech = T.TimeStretch(hop_length=hop_length, n_freq=freq)
         self.spec_aug = torch.nn.Sequential(
-            # GaussianNoise(min_snr=0.0001, max_snr=0.02),
+            GaussianNoise(min_snr=0.0001, max_snr=0.02),
             T.FrequencyMasking(freq_mask_param=80),
             # T.TimeMasking(time_mask_param=80),
         )

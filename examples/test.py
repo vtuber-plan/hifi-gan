@@ -70,7 +70,8 @@ device = "cpu"
 hifigan = load_local().to(device)
 
 # Load audio
-wav, sr = torchaudio.load("dataset/103 Chinese Mandarin Songs in Acapella - Female/000102_01.wav")
+# wav, sr = torchaudio.load("dataset/103 Chinese Mandarin Songs in Acapella - Female/000102_01.wav")
+wav, sr = torchaudio.load("zszy_48k.wav")
 if sr != 48000:
     wav = torchaudio.functional.resample(waveform=wav, orig_freq=sr, new_freq=48000)
 

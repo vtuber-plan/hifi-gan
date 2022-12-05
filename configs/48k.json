@@ -1,7 +1,7 @@
 {
   "trainer": {
     "max_epochs": 20000,
-    "accumulate_grad_batches": 1,
+    "accumulate_grad_batches": 2,
     "default_root_dir": "./logs_48k",
     "val_check_interval": 1.0,
     "gradient_clip_val": 0.5
@@ -15,7 +15,7 @@
     "discriminator_learning_rate": 0.0001,
     "betas": [0.8, 0.99],
     "eps": 1e-9,
-    "batch_size": 16,
+    "batch_size": 8,
     "fp16_run": true,
     "lr_decay": 0.999875,
     "segment_size": 16384,
