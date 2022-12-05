@@ -56,6 +56,12 @@ class MelDataset(torch.utils.data.Dataset):
         # audio_mel = spec_to_mel_torch(audio_spec, self.filter_length, self.n_mel_channels, self.sampling_rate, self.mel_fmin, self.mel_fmax)
         # audio_mel = torch.squeeze(audio_mel, 0)
 
+        if audio_wav.shape[1] > self.sampling_rate * 20:
+            l = self.sampling_rate * 10
+            start = random.randrange(0, audio_wav.shape[1] - l)
+            clip_audio_wav = audio_wav[:, start:start+l]
+            audio_wav = clip_audio_wav
+
         return {
             "wav": audio_wav
         }

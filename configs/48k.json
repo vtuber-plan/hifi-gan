@@ -15,7 +15,7 @@
     "discriminator_learning_rate": 0.0001,
     "betas": [0.8, 0.99],
     "eps": 1e-9,
-    "batch_size": 8,
+    "batch_size": 32,
     "fp16_run": true,
     "lr_decay": 0.999875,
     "segment_size": 16384,
