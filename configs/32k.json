@@ -18,7 +18,8 @@
     "segment_size": 16384,
     "init_lr_ratio": 1,
     "warmup_epochs": 0,
-    "c_mel": 45
+    "c_mel": 15,
+    "c_spec": 45
   },
   "data": {
     "training_files": "filelists/32k_audio_filelist_train.txt",
