@@ -16,12 +16,13 @@
     "betas": [0.8, 0.99],
     "eps": 1e-9,
     "batch_size": 32,
-    "fp16_run": true,
+    "fp16_run": false,
     "lr_decay": 0.999875,
     "segment_size": 16384,
     "init_lr_ratio": 1,
     "warmup_epochs": 0,
-    "c_mel": 45
+    "c_mel": 25,
+    "c_spec": 45
   },
   "data": {
     "training_files": "filelists/48k_audio_filelist_train.txt",
