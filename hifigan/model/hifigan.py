@@ -116,12 +116,7 @@ class HifiGAN(pl.LightningModule):
             y_ds_hat_r, y_ds_hat_g, _, _ = self.net_scale_d(y_wav, y_hat.detach())
             loss_disc_s, losses_disc_s_r, losses_disc_s_g = discriminator_loss(y_ds_hat_r, y_ds_hat_g)
 
-            # SPD
-            # y_de_hat_r, y_de_hat_g, _, _ = self.net_spec_d(y_wav, y_hat.detach())
-            # loss_disc_e, losses_disc_e_r, losses_disc_e_g = discriminator_loss(y_de_hat_r, y_de_hat_g)
-
-
-            loss_disc_all = loss_disc_p + loss_disc_s # + loss_disc_e
+            loss_disc_all = loss_disc_p + loss_disc_s
 
             # log
             lr = self.optim_g.param_groups[0]['lr']
@@ -130,8 +125,6 @@ class HifiGAN(pl.LightningModule):
             scalar_dict.update({"train/d_p_g/{}".format(i): v for i, v in enumerate(losses_disc_p_g)})
             scalar_dict.update({"train/d_s_r/{}".format(i): v for i, v in enumerate(losses_disc_s_r)})
             scalar_dict.update({"train/d_s_g/{}".format(i): v for i, v in enumerate(losses_disc_s_g)})
-            # scalar_dict.update({"train/d_e_r/{}".format(i): v for i, v in enumerate(losses_disc_e_r)})
-            # scalar_dict.update({"train/d_e_g/{}".format(i): v for i, v in enumerate(losses_disc_e_g)})
 
             image_dict = {}
             
@@ -155,10 +148,6 @@ class HifiGAN(pl.LightningModule):
             loss_s_fm = feature_loss(fmap_s_r, fmap_s_g)
             loss_s_gen, losses_s_gen = generator_loss(y_ds_hat_g)
 
-            # y_de_hat_r, y_de_hat_g, fmap_e_r, fmap_e_g = self.net_spec_d(y_wav, y_hat)
-            # loss_e_fm = feature_loss(fmap_e_r, fmap_e_g)
-            # loss_e_gen, losses_e_gen = generator_loss(y_de_hat_g)
-
             y_mel = mel_spectrogram_torch(
                 y_wav.squeeze(1).float(),
                 self.hparams.data.filter_length,
@@ -174,7 +163,7 @@ class HifiGAN(pl.LightningModule):
             loss_spec = F.l1_loss(y_spec_hat, y_spec) * self.hparams.train.c_spec
             loss_mel = F.l1_loss(y_mel_hat, y_mel) * self.hparams.train.c_mel
 
-            loss_gen_all = (loss_s_gen + loss_s_fm) + (loss_p_gen + loss_p_fm) + loss_mel + loss_spec
+            loss_gen_all = (loss_s_gen + loss_s_fm) + (loss_p_gen + loss_p_fm) + loss_spec + loss_mel
 
             # Logging to TensorBoard by default
             lr = self.optim_g.param_groups[0]['lr']
@@ -182,11 +171,10 @@ class HifiGAN(pl.LightningModule):
             scalar_dict.update({
                 "train/g/p_fm": loss_p_fm,
                 "train/g/s_fm": loss_s_fm,
-                # "train/g/e_fm": loss_e_fm,
                 "train/g/p_gen": loss_p_gen,
                 "train/g/s_gen": loss_s_gen,
-                # "train/g/e_gen": loss_e_gen,
                 "train/g/loss_mel": loss_mel,
+                "train/g/loss_spec": loss_spec,
             })
 
             scalar_dict.update({"train/g/p_gen_{}".format(i): v for i, v in enumerate(losses_p_gen)})

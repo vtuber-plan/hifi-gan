@@ -108,7 +108,7 @@ class Generator(torch.nn.Module):
                     out_channels=upsample_initial_channel//(2**(i+1)),
                     kernel_size=k,
                     stride=u,
-                    dilation=[1,3,5,7]
+                    dilation=d
                 )
             )
         '''
