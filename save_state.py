@@ -3,7 +3,7 @@ import glob
 import shutil
 from typing import Optional
 import torch
-from hifigan.model.hifigan import HifiGAN
+from hifigan.light.hifigan import HifiGAN
 import hashlib
 
 def save(ckpt_path: str, name: str):

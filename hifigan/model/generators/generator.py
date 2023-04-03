@@ -95,30 +95,21 @@ class Generator(torch.nn.Module):
         self.num_upsamples = len(upsample_rates)
         self.n_head = 4
 
-        self.conv_pre = Conv1d(in_channels=initial_channel, out_channels=upsample_initial_channel, kernel_size=pre_kernel_size, stride=1, padding=(pre_kernel_size-1)//2)
-
-        # self.transformer_pre_encoder_layer = nn.TransformerEncoderLayer(d_model=upsample_initial_channel, nhead=self.n_head, batch_first=True, activation="gelu")
+        # self.transformer_pre_encoder_layer = nn.TransformerEncoderLayer(d_model=initial_channel, nhead=self.n_head, batch_first=True, activation="gelu")
         # self.transformer_pre_encoder = nn.TransformerEncoder(self.transformer_pre_encoder_layer, num_layers=2)
+
+        self.conv_pre = Conv1d(in_channels=initial_channel, out_channels=upsample_initial_channel, kernel_size=pre_kernel_size, stride=1, padding=(pre_kernel_size-1)//2)
 
         self.ups = nn.ModuleList()
         for i, (u, k, d) in enumerate(zip(upsample_rates, upsample_kernel_sizes, upsample_dilation_sizes)):
             self.ups.append(
-                MultiHeadConvTranspose1dBlock(
-                    in_channels=upsample_initial_channel//(2**i),
-                    out_channels=upsample_initial_channel//(2**(i+1)),
-                    kernel_size=k,
-                    stride=u,
-                    dilation=d
-                )
-            )
-        '''
-        ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
+                ConvTranspose1d(in_channels=upsample_initial_channel//(2**i),
                     out_channels=upsample_initial_channel//(2**(i+1)),
                     kernel_size=k,
                     stride=u,
                     padding=(((k-1)*d+1)-u)//2,
                     dilation=d)
-        '''
+            )
 
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
@@ -131,8 +122,8 @@ class Generator(torch.nn.Module):
         self.conv_post.apply(init_weights)
 
     def forward(self, x):
-        x = self.conv_pre(x)
         # x = self.transformer_pre_encoder(x.transpose(1,2)).transpose(1,2)
+        x = self.conv_pre(x)
         
         for i in range(self.num_upsamples):
             x = F.leaky_relu(x, LRELU_SLOPE)

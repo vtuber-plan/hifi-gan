@@ -41,7 +41,7 @@ class AudioPipeline(torch.nn.Module):
         return mel
 
 def load_local():
-    from hifigan.model.hifigan import HifiGAN
+    from hifigan.light.hifigan import HifiGAN
 
     ckpt_path = None
     if os.path.exists("logs_48k/lightning_logs"):

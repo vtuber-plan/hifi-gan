@@ -10,14 +10,15 @@ import tqdm
 from torch import nn, optim
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
-from hifigan.model.hifigan import HifiGAN
+from hifigan.light.hifigan import HifiGAN
 
 from hifigan.data.collate import MelCollate
 
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning.profiler import SimpleProfiler, AdvancedProfiler
+import lightning.pytorch as pl
+from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
+from lightning.pytorch.profilers import SimpleProfiler, AdvancedProfiler
+import lightning_fabric
 
 from hifigan.hparams import HParams
 from hifigan.data.dataset import MelDataset, MelDataset
@@ -50,7 +51,7 @@ def main():
     args = parser.parse_args()
 
     hparams = get_hparams(args.config)
-    pl.utilities.seed.seed_everything(hparams.train.seed)
+    lightning_fabric.utilities.seed.seed_everything(hparams.train.seed)
 
     devices = [int(n.strip()) for n in args.device.split(",")]
 
@@ -74,8 +75,11 @@ def main():
     trainer_params.update(hparams.trainer)
 
     if hparams.train.fp16_run:
-        trainer_params["amp_backend"] = "native"
-        trainer_params["precision"] = 16
+        print("using fp16")
+        trainer_params["precision"] = "16-mixed"
+    elif hparams.train.bp16_run:
+        print("using bf16")
+        trainer_params["precision"] = "bf16-mixed"
     
     trainer_params["num_nodes"] = args.num_nodes
 

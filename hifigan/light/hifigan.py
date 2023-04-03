@@ -11,23 +11,24 @@ import torchaudio.transforms as T
 
 import random
 
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torchmetrics
 
-from .discriminators.multi_scale_discriminator import MultiScaleDiscriminator
-from .discriminators.multi_period_discriminator import MultiPeriodDiscriminator
-from .discriminators.spectrogram_discriminator import SpectrogramDiscriminator
-from .generators.generator import Generator
+from ..model.discriminators.multi_scale_discriminator import MultiScaleDiscriminator
+from ..model.discriminators.multi_period_discriminator import MultiPeriodDiscriminator
+from ..model.discriminators.spectrogram_discriminator import SpectrogramDiscriminator
+from ..model.generators.generator import Generator
+from ..model.commons import slice_segments, rand_slice_segments, sequence_mask, clip_grad_value_
+from ..model.pipeline import AudioPipeline
 
 from ..mel_processing import spec_to_mel_torch, mel_spectrogram_torch, spectrogram_torch, spectrogram_torch_audio
 from .losses import discriminator_loss, kl_loss,feature_loss, generator_loss
 from .. import utils
-from .commons import slice_segments, rand_slice_segments, sequence_mask, clip_grad_value_
-from .pipeline import AudioPipeline
 
 class HifiGAN(pl.LightningModule):
     def __init__(self, **kwargs):
         super().__init__()
+        self.automatic_optimization = False
         self.save_hyperparameters(*[k for k in kwargs])
 
         self.net_g = Generator(
@@ -46,11 +47,6 @@ class HifiGAN(pl.LightningModule):
             use_spectral_norm=self.hparams.model.use_spectral_norm
         )
         self.net_scale_d = MultiScaleDiscriminator(use_spectral_norm=self.hparams.model.use_spectral_norm)
-        # self.net_spec_d = SpectrogramDiscriminator(
-        #     n_fft=self.hparams.data.filter_length,
-        #     win_length=self.hparams.data.win_length,
-        #     hop_length=self.hparams.data.hop_length,
-        #     use_spectral_norm=self.hparams.model.use_spectral_norm)
 
         self.audio_pipeline = AudioPipeline(freq=self.hparams.data.sampling_rate,
                                             n_fft=self.hparams.data.filter_length,
@@ -63,7 +59,9 @@ class HifiGAN(pl.LightningModule):
         # metrics
         self.valid_mel_loss = torchmetrics.MeanMetric()
 
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int, optimizer_idx: int):
+    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
+        discriminator_opt, generator_opt = self.optimizers()
+
         x_wav, x_wav_lengths = batch["x_wav_values"], batch["x_wav_lengths"]
         y_wav, y_wav_lengths = batch["y_wav_values"], batch["y_wav_lengths"]
         
@@ -86,15 +84,6 @@ class HifiGAN(pl.LightningModule):
         # generator forward
         y_hat = self.net_g(x_mel)
 
-        y_spec_hat = spectrogram_torch_audio(
-            y_hat.squeeze(1).float(),
-            self.hparams.data.filter_length,
-            self.hparams.data.sampling_rate,
-            self.hparams.data.hop_length,
-            self.hparams.data.win_length,
-            False
-        )
-
         y_mel_hat = mel_spectrogram_torch(
             y_hat.squeeze(1).float(),
             self.hparams.data.filter_length,
@@ -107,93 +96,97 @@ class HifiGAN(pl.LightningModule):
         )
 
         # Discriminator
-        if optimizer_idx == 0:
-            # MPD
-            y_dp_hat_r, y_dp_hat_g, _, _ = self.net_period_d(y_wav, y_hat.detach())
-            loss_disc_p, losses_disc_p_r, losses_disc_p_g = discriminator_loss(y_dp_hat_r, y_dp_hat_g)
+        discriminator_opt.zero_grad()
+        # MPD
+        y_dp_hat_r, y_dp_hat_g, _, _ = self.net_period_d(y_wav, y_hat.detach())
+        loss_disc_p, losses_disc_p_r, losses_disc_p_g = discriminator_loss(y_dp_hat_r, y_dp_hat_g)
 
-            # MSD
-            y_ds_hat_r, y_ds_hat_g, _, _ = self.net_scale_d(y_wav, y_hat.detach())
-            loss_disc_s, losses_disc_s_r, losses_disc_s_g = discriminator_loss(y_ds_hat_r, y_ds_hat_g)
+        # MSD
+        y_ds_hat_r, y_ds_hat_g, _, _ = self.net_scale_d(y_wav, y_hat.detach())
+        loss_disc_s, losses_disc_s_r, losses_disc_s_g = discriminator_loss(y_ds_hat_r, y_ds_hat_g)
 
-            loss_disc_all = loss_disc_p + loss_disc_s
+        loss_disc_all = loss_disc_p + loss_disc_s
 
-            # log
-            lr = self.optim_g.param_groups[0]['lr']
-            scalar_dict = {"train/d/loss_total": loss_disc_all, "learning_rate": lr}
-            scalar_dict.update({"train/d_p_r/{}".format(i): v for i, v in enumerate(losses_disc_p_r)})
-            scalar_dict.update({"train/d_p_g/{}".format(i): v for i, v in enumerate(losses_disc_p_g)})
-            scalar_dict.update({"train/d_s_r/{}".format(i): v for i, v in enumerate(losses_disc_s_r)})
-            scalar_dict.update({"train/d_s_g/{}".format(i): v for i, v in enumerate(losses_disc_s_g)})
+        # log
+        lr = self.optim_g.param_groups[0]['lr']
+        scalar_dict = {"train/d/loss_total": loss_disc_all, "learning_rate": lr}
+        scalar_dict.update({"train/d_p_r/{}".format(i): v for i, v in enumerate(losses_disc_p_r)})
+        scalar_dict.update({"train/d_p_g/{}".format(i): v for i, v in enumerate(losses_disc_p_g)})
+        scalar_dict.update({"train/d_s_r/{}".format(i): v for i, v in enumerate(losses_disc_s_r)})
+        scalar_dict.update({"train/d_s_g/{}".format(i): v for i, v in enumerate(losses_disc_s_g)})
 
-            image_dict = {}
-            
-            tensorboard = self.logger.experiment
+        image_dict = {}
+        
+        tensorboard = self.logger.experiment
 
-            utils.summarize(
-                writer=tensorboard,
-                global_step=self.global_step, 
-                images=image_dict,
-                scalars=scalar_dict)
-            
-            return loss_disc_all
+        utils.summarize(
+            writer=tensorboard,
+            global_step=self.global_step, 
+            images=image_dict,
+            scalars=scalar_dict)
+        
+        self.manual_backward(loss_disc_all)
+        discriminator_opt.step()
 
         # Generator
-        if optimizer_idx == 1:
-            y_dp_hat_r, y_dp_hat_g, fmap_p_r, fmap_p_g = self.net_period_d(y_wav, y_hat)
-            loss_p_fm = feature_loss(fmap_p_r, fmap_p_g)
-            loss_p_gen, losses_p_gen = generator_loss(y_dp_hat_g)
+        generator_opt.zero_grad()
+    
+        y_dp_hat_r, y_dp_hat_g, fmap_p_r, fmap_p_g = self.net_period_d(y_wav, y_hat)
+        loss_p_fm = feature_loss(fmap_p_r, fmap_p_g)
+        loss_p_gen, losses_p_gen = generator_loss(y_dp_hat_g)
 
-            y_ds_hat_r, y_ds_hat_g, fmap_s_r, fmap_s_g = self.net_scale_d(y_wav, y_hat)
-            loss_s_fm = feature_loss(fmap_s_r, fmap_s_g)
-            loss_s_gen, losses_s_gen = generator_loss(y_ds_hat_g)
+        y_ds_hat_r, y_ds_hat_g, fmap_s_r, fmap_s_g = self.net_scale_d(y_wav, y_hat)
+        loss_s_fm = feature_loss(fmap_s_r, fmap_s_g)
+        loss_s_gen, losses_s_gen = generator_loss(y_ds_hat_g)
 
-            y_mel = mel_spectrogram_torch(
-                y_wav.squeeze(1).float(),
-                self.hparams.data.filter_length,
-                self.hparams.data.n_mel_channels,
-                self.hparams.data.sampling_rate,
-                self.hparams.data.hop_length,
-                self.hparams.data.win_length,
-                self.hparams.data.mel_fmin,
-                self.hparams.data.mel_fmax
-            )
+        y_mel = mel_spectrogram_torch(
+            y_wav.squeeze(1).float(),
+            self.hparams.data.filter_length,
+            self.hparams.data.n_mel_channels,
+            self.hparams.data.sampling_rate,
+            self.hparams.data.hop_length,
+            self.hparams.data.win_length,
+            self.hparams.data.mel_fmin,
+            self.hparams.data.mel_fmax
+        )
 
-            # mel
-            loss_spec = F.l1_loss(y_spec_hat, y_spec) * self.hparams.train.c_spec
-            loss_mel = F.l1_loss(y_mel_hat, y_mel) * self.hparams.train.c_mel
+        # mel
+        loss_mel = F.l1_loss(y_mel_hat, y_mel) * self.hparams.train.c_mel
 
-            loss_gen_all = (loss_s_gen + loss_s_fm) + (loss_p_gen + loss_p_fm) + loss_spec + loss_mel
+        loss_gen_all = (loss_s_gen + loss_s_fm) + (loss_p_gen + loss_p_fm) + loss_mel
 
-            # Logging to TensorBoard by default
-            lr = self.optim_g.param_groups[0]['lr']
-            scalar_dict = {"train/g/loss_total": loss_gen_all, "learning_rate": lr}
-            scalar_dict.update({
-                "train/g/p_fm": loss_p_fm,
-                "train/g/s_fm": loss_s_fm,
-                "train/g/p_gen": loss_p_gen,
-                "train/g/s_gen": loss_s_gen,
-                "train/g/loss_mel": loss_mel,
-                "train/g/loss_spec": loss_spec,
-            })
+        # Logging to TensorBoard by default
+        lr = self.optim_g.param_groups[0]['lr']
+        scalar_dict = {"train/g/loss_total": loss_gen_all, "learning_rate": lr}
+        scalar_dict.update({
+            "train/g/p_fm": loss_p_fm,
+            "train/g/s_fm": loss_s_fm,
+            "train/g/p_gen": loss_p_gen,
+            "train/g/s_gen": loss_s_gen,
+            "train/g/loss_mel": loss_mel
+        })
 
-            scalar_dict.update({"train/g/p_gen_{}".format(i): v for i, v in enumerate(losses_p_gen)})
-            scalar_dict.update({"train/g/s_gen_{}".format(i): v for i, v in enumerate(losses_s_gen)})
+        scalar_dict.update({"train/g/p_gen_{}".format(i): v for i, v in enumerate(losses_p_gen)})
+        scalar_dict.update({"train/g/s_gen_{}".format(i): v for i, v in enumerate(losses_s_gen)})
 
-            # image_dict = {
-            #     "slice/mel_org": utils.plot_spectrogram_to_numpy(y_mel[0].data.cpu().numpy()),
-            #     "slice/mel_gen": utils.plot_spectrogram_to_numpy(y_mel_hat[0].data.cpu().numpy()), 
-            #     "all/mel": utils.plot_spectrogram_to_numpy(mel[0].data.cpu().numpy())
-            # }
-            image_dict = {}
-            
-            tensorboard = self.logger.experiment
-            utils.summarize(
-                writer=tensorboard,
-                global_step=self.global_step, 
-                images=image_dict,
-                scalars=scalar_dict)
-            return loss_gen_all
+        # image_dict = {
+        #     "slice/mel_org": utils.plot_spectrogram_to_numpy(y_mel[0].data.cpu().numpy()),
+        #     "slice/mel_gen": utils.plot_spectrogram_to_numpy(y_mel_hat[0].data.cpu().numpy()), 
+        #     "all/mel": utils.plot_spectrogram_to_numpy(mel[0].data.cpu().numpy())
+        # }
+        image_dict = {}
+        
+        tensorboard = self.logger.experiment
+        utils.summarize(
+            writer=tensorboard,
+            global_step=self.global_step, 
+            images=image_dict,
+            scalars=scalar_dict)
+
+        self.manual_backward(loss_gen_all)
+        generator_opt.step()    
+        
+        # return loss_disc_all, loss_gen_all
 
     def validation_step(self, batch, batch_idx):
         self.net_g.eval()
@@ -261,7 +254,7 @@ class HifiGAN(pl.LightningModule):
             audio_sampling_rate=self.hparams.data.sampling_rate,
         )
     
-    def validation_epoch_end(self, outputs) -> None:
+    def on_validation_epoch_end(self) -> None:
         self.net_g.eval()
         valid_mel_loss_epoch = self.valid_mel_loss.compute()
         self.log("valid/loss_mel_epoch", valid_mel_loss_epoch.item(), sync_dist=True)

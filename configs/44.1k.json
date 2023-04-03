@@ -14,6 +14,7 @@
     "eps": 1e-9,
     "batch_size": 32,
     "fp16_run": true,
+    "bp16_run": false,
     "lr_decay": 0.999875,
     "segment_size": 16384,
     "init_lr_ratio": 1,
